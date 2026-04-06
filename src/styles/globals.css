@@ -1,0 +1,73 @@
+:root {
+  --bg: #FAF8F5;
+  --bg-warm: #F3EDE6;
+  --ink: #1A1715;
+  --ink-soft: #5C5651;
+  --ink-muted: #9B938B;
+  --accent: #8B2635;
+  --accent-light: #B8485A;
+  --accent-glow: rgba(139, 38, 53, 0.08);
+  --gold: #C6A96C;
+  --gold-soft: rgba(198, 169, 108, 0.15);
+  --white: #FFFFFF;
+  --border: rgba(26, 23, 21, 0.08);
+  --shadow-sm: 0 1px 3px rgba(26, 23, 21, 0.04);
+  --shadow-md: 0 8px 30px rgba(26, 23, 21, 0.06);
+  --shadow-lg: 0 20px 60px rgba(26, 23, 21, 0.08);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'Outfit', system-ui, sans-serif;
+  --green: #2E7D32;
+  --green-bg: rgba(46, 125, 50, 0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  font-weight: 300;
+  line-height: 1.7;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--accent-glow); color: var(--accent); }
+
+/* ========== LOADING SKELETON ========== */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-warm) 25%, var(--bg) 50%, var(--bg-warm) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+.skeleton-card { height: 420px; border-radius: var(--radius); }
+.skeleton-text { height: 16px; margin-bottom: 10px; }
+.skeleton-text.short { width: 60%; }
+
+/* ========== TOAST NOTIFICATIONS ========== */
+.toast-container {
+  position: fixed; bottom: 24px; right: 24px; z-index: 2000;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.toast {
+  padding: 14px 22px; border-radius: var(--radius-sm);
+  background: var(--ink); color: var(--bg);
+  font-size: 0.88rem; box-shadow: var(--shadow-lg);
+  animation: toastIn 0.3s ease;
+  max-width: 360px;
+}
+.toast.success { background: var(--green); }
+.toast.error { background: #C62828; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ========== ANIMATIONS ========== */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }

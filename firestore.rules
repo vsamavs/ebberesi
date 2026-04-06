@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // EVENTS — everyone can read, only admins can write
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if request.auth != null && isAdmin(request.auth.token.email);
+    }
+
+    // BOOKINGS — authenticated users can create, only the booking owner or admin can read
+    match /bookings/{bookingId} {
+      allow create: if true; // Allow unauthenticated booking (guest checkout)
+      allow read: if request.auth != null &&
+        (resource.data.email == request.auth.token.email || isAdmin(request.auth.token.email));
+      allow update: if request.auth != null && isAdmin(request.auth.token.email);
+    }
+
+    // NEWSLETTER — anyone can subscribe, only admins can read
+    match /newsletter/{docId} {
+      allow create: if true;
+      allow read: if request.auth != null && isAdmin(request.auth.token.email);
+    }
+
+    // BLOG — everyone can read, only admins can write
+    match /blog/{postId} {
+      allow read: if true;
+      allow write: if request.auth != null && isAdmin(request.auth.token.email);
+    }
+
+    // MEMBERS — admins manage, users can read their own
+    match /members/{memberId} {
+      allow read: if request.auth != null &&
+        (resource.data.email == request.auth.token.email || isAdmin(request.auth.token.email));
+      allow write: if request.auth != null && isAdmin(request.auth.token.email);
+    }
+
+    // Helper: check if user is admin
+    // Replace with YOUR admin email(s)
+    function isAdmin(email) {
+      return email in ['tuaemail@ebberesi.it'];
+    }
+  }
+}
