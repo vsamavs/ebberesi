@@ -125,7 +125,8 @@ export async function completeSignIn() {
   if (isSignInWithEmailLink(auth, window.location.href)) {
     let email = window.localStorage.getItem('ebberesi_login_email');
     if (!email) {
-      email = window.prompt('Per completare l\'accesso, inserisci la tua email:');
+      // Fallback: should rarely happen since we store it on send
+      return null;
     }
     const result = await signInWithEmailLink(auth, email, window.location.href);
     window.localStorage.removeItem('ebberesi_login_email');
@@ -142,6 +143,30 @@ export function onAuth(callback) {
 /** Sign out */
 export async function logout() {
   await signOut(auth);
+}
+
+// ============================================================
+// USER PROFILES
+// ============================================================
+
+/** Get user profile from Firestore */
+export async function getUserProfile(uid) {
+  const snap = await getDoc(doc(db, 'users', uid));
+  return snap.exists() ? snap.data() : null;
+}
+
+/** Create or update user profile */
+export async function saveUserProfile(uid, profileData) {
+  const { setDoc } = await import('firebase/firestore');
+  await setDoc(doc(db, 'users', uid), {
+    ...profileData,
+    updatedAt: Timestamp.now(),
+  }, { merge: true });
+}
+
+/** Check if user profile is complete (has required fields) */
+export function isProfileComplete(profile) {
+  return profile && profile.name && profile.surname && profile.phone && profile.birthDate;
 }
 
 // ============================================================

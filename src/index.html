@@ -118,11 +118,41 @@
             <button class="modal-btn modal-btn-close-final" onclick="closeAuthModal()">Chiudi</button>
           </div>
         </div>
+        <!-- Complete profile step (shown for new users) -->
+        <div id="authStepProfile" style="display:none">
+          <p style="font-size:.9rem;color:var(--ink-soft);margin-bottom:20px;">Completa il tuo profilo per continuare. Questi dati ci servono per gestire le prenotazioni e la tessera socio.</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Nome *</label>
+              <input class="form-input" type="text" id="profileNome" placeholder="Mario">
+              <div class="form-error" id="errProfileNome">Inserisci il tuo nome</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cognome *</label>
+              <input class="form-input" type="text" id="profileCognome" placeholder="Rossi">
+              <div class="form-error" id="errProfileCognome">Inserisci il tuo cognome</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Telefono *</label>
+            <input class="form-input" type="tel" id="profileTelefono" placeholder="+39 333 1234567">
+            <div class="form-error" id="errProfileTelefono">Inserisci il numero di telefono</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data di nascita *</label>
+            <input class="form-input" type="date" id="profileBirthDate">
+            <div class="form-error" id="errProfileBirthDate">Inserisci la data di nascita</div>
+          </div>
+          <div class="modal-actions">
+            <button class="modal-btn modal-btn-next" style="flex:1" onclick="handleSaveProfile()">Salva e continua</button>
+          </div>
+        </div>
         <!-- Logged in view -->
         <div id="authStepLoggedIn" style="display:none">
           <div class="auth-profile">
             <div class="auth-avatar" id="authAvatar"></div>
             <div class="auth-user-info">
+              <div class="auth-user-name" id="authUserName" style="font-family:var(--serif);font-size:1.15rem;font-weight:500;color:var(--ink)"></div>
               <div class="auth-user-email" id="authUserEmail"></div>
               <div class="auth-member-badge" id="authMemberBadge" style="display:none">Socio Ebbe Resi</div>
             </div>

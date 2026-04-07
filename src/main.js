@@ -1,4 +1,4 @@
-import { getEvents, createBooking, subscribeNewsletter, formatDate, getBlogPosts, sendLoginLink, completeSignIn, onAuth, logout, checkMembership } from './lib/firebase.js';
+import { getEvents, createBooking, subscribeNewsletter, formatDate, getBlogPosts, sendLoginLink, completeSignIn, onAuth, logout, checkMembership, getUserProfile, saveUserProfile, isProfileComplete } from './lib/firebase.js';
 import './styles/globals.css';
 
 // ===================================================================
@@ -446,6 +446,8 @@ function showToast(message, type = 'success') {
 // ===================================================================
 // AUTH
 // ===================================================================
+let userProfile = null;
+
 function initAuth() {
   // Check if this is a magic link callback
   completeSignIn().then(user => {
@@ -461,8 +463,21 @@ function initAuth() {
   // Listen to auth state
   onAuth(async (user) => {
     currentUser = user;
-    updateAuthUI(user);
+    userProfile = null;
+
     if (user) {
+      // Load profile from Firestore
+      try {
+        userProfile = await getUserProfile(user.uid);
+      } catch (e) { console.error('Profile load error:', e); }
+
+      // If profile incomplete, show completion modal automatically
+      if (!isProfileComplete(userProfile)) {
+        updateAuthUI(user);
+        showProfileCompletion();
+        return;
+      }
+
       // Check membership status
       try {
         const memberStatus = await checkMembership(user.email);
@@ -471,6 +486,8 @@ function initAuth() {
         }
       } catch (e) { /* ignore */ }
     }
+
+    updateAuthUI(user);
   });
 }
 
@@ -479,11 +496,12 @@ function updateAuthUI(user) {
   if (!btn) return;
 
   if (user) {
-    // Replace text link with avatar
-    const initials = getInitials(user.email);
+    const initials = userProfile && userProfile.name && userProfile.surname
+      ? (userProfile.name[0] + userProfile.surname[0]).toUpperCase()
+      : getInitials(user.email);
     btn.className = 'nav-auth-avatar';
     btn.textContent = initials;
-    btn.title = user.email;
+    btn.title = userProfile ? `${userProfile.name} ${userProfile.surname}` : user.email;
   } else {
     btn.className = 'nav-auth';
     btn.textContent = 'Accedi';
@@ -501,33 +519,51 @@ function getInitials(email) {
   return name.substring(0, 2).toUpperCase();
 }
 
+function showProfileCompletion() {
+  hideAllAuthSteps();
+  document.getElementById('authStepProfile').style.display = 'block';
+  document.getElementById('authModalTitle').textContent = 'Completa il profilo';
+  document.getElementById('authModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function hideAllAuthSteps() {
+  ['authStepEmail', 'authStepSent', 'authStepProfile', 'authStepLoggedIn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
 // Auth modal
 window.openAuthModal = function () {
-  const modal = document.getElementById('authModal');
-  const stepEmail = document.getElementById('authStepEmail');
-  const stepSent = document.getElementById('authStepSent');
-  const stepLoggedIn = document.getElementById('authStepLoggedIn');
-
-  stepEmail.style.display = 'none';
-  stepSent.style.display = 'none';
-  stepLoggedIn.style.display = 'none';
+  hideAllAuthSteps();
 
   if (currentUser) {
+    if (!isProfileComplete(userProfile)) {
+      showProfileCompletion();
+      return;
+    }
     // Show profile
-    stepLoggedIn.style.display = 'block';
+    document.getElementById('authStepLoggedIn').style.display = 'block';
     document.getElementById('authModalTitle').textContent = 'Il tuo profilo';
-    document.getElementById('authAvatar').textContent = getInitials(currentUser.email);
+    const initials = userProfile
+      ? (userProfile.name[0] + userProfile.surname[0]).toUpperCase()
+      : getInitials(currentUser.email);
+    document.getElementById('authAvatar').textContent = initials;
     document.getElementById('authUserEmail').textContent = currentUser.email;
+    if (userProfile) {
+      document.getElementById('authUserName').textContent = `${userProfile.name} ${userProfile.surname}`;
+    }
   } else {
     // Show login form
-    stepEmail.style.display = 'block';
+    document.getElementById('authStepEmail').style.display = 'block';
     document.getElementById('authModalTitle').textContent = 'Accedi o registrati';
     document.getElementById('authEmail').value = '';
     document.getElementById('authEmailErr').classList.remove('show');
     document.getElementById('authEmail').classList.remove('error');
   }
 
-  modal.classList.add('active');
+  document.getElementById('authModal').classList.add('active');
   document.body.style.overflow = 'hidden';
 };
 
@@ -555,8 +591,7 @@ window.handleSendLink = async function () {
 
   try {
     await sendLoginLink(email);
-    // Show confirmation
-    document.getElementById('authStepEmail').style.display = 'none';
+    hideAllAuthSteps();
     document.getElementById('authStepSent').style.display = 'block';
     document.getElementById('authSentEmail').textContent = email;
     document.getElementById('authModalTitle').textContent = 'Email inviata!';
@@ -566,10 +601,57 @@ window.handleSendLink = async function () {
   }
 };
 
+window.handleSaveProfile = async function () {
+  // Validate
+  let ok = true;
+  const fields = [
+    { id: 'profileNome', err: 'errProfileNome', test: v => v.trim().length >= 2 },
+    { id: 'profileCognome', err: 'errProfileCognome', test: v => v.trim().length >= 2 },
+    { id: 'profileTelefono', err: 'errProfileTelefono', test: v => v.replace(/\s/g, '').length >= 8 },
+    { id: 'profileBirthDate', err: 'errProfileBirthDate', test: v => v.length > 0 },
+  ];
+  fields.forEach(f => {
+    const inp = document.getElementById(f.id);
+    const err = document.getElementById(f.err);
+    if (!f.test(inp.value)) { inp.classList.add('error'); err.classList.add('show'); ok = false; }
+    else { inp.classList.remove('error'); err.classList.remove('show'); }
+  });
+  if (!ok || !currentUser) return;
+
+  try {
+    const profileData = {
+      name: document.getElementById('profileNome').value.trim(),
+      surname: document.getElementById('profileCognome').value.trim(),
+      phone: document.getElementById('profileTelefono').value.trim(),
+      birthDate: document.getElementById('profileBirthDate').value,
+      email: currentUser.email,
+      createdAt: userProfile?.createdAt || new Date().toISOString(),
+    };
+
+    await saveUserProfile(currentUser.uid, profileData);
+    userProfile = profileData;
+
+    showToast('Profilo salvato!', 'success');
+    updateAuthUI(currentUser);
+
+    // Show the logged-in view
+    hideAllAuthSteps();
+    document.getElementById('authStepLoggedIn').style.display = 'block';
+    document.getElementById('authModalTitle').textContent = 'Il tuo profilo';
+    document.getElementById('authAvatar').textContent = (profileData.name[0] + profileData.surname[0]).toUpperCase();
+    document.getElementById('authUserEmail').textContent = currentUser.email;
+    document.getElementById('authUserName').textContent = `${profileData.name} ${profileData.surname}`;
+  } catch (err) {
+    console.error('Save profile error:', err);
+    showToast('Errore nel salvataggio. Riprova.', 'error');
+  }
+};
+
 window.handleLogout = async function () {
   try {
     await logout();
     currentUser = null;
+    userProfile = null;
     document.getElementById('authMemberBadge').style.display = 'none';
     window.closeAuthModal();
     showToast('Disconnesso.', 'success');
