@@ -1,4 +1,4 @@
-import { getEvents, createBooking, subscribeNewsletter, formatDate, getBlogPosts } from './lib/firebase.js';
+import { getEvents, createBooking, subscribeNewsletter, formatDate, getBlogPosts, sendLoginLink, completeSignIn, onAuth, logout, checkMembership } from './lib/firebase.js';
 import './styles/globals.css';
 
 // ===================================================================
@@ -8,6 +8,7 @@ let events = [];
 let blogPosts = [];
 let currentStep = 1, qty = 0, isMember = false, selectedPayment = null;
 let currentEvent = null;
+let currentUser = null;
 
 // ===================================================================
 // INIT
@@ -15,6 +16,7 @@ let currentEvent = null;
 document.addEventListener('DOMContentLoaded', async () => {
   initNav();
   initScrollReveal();
+  initAuth();
   await loadEvents();
   await loadBlog();
   initNewsletterForm();
@@ -440,3 +442,138 @@ function showToast(message, type = 'success') {
   container.appendChild(toast);
   setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3500);
 }
+
+// ===================================================================
+// AUTH
+// ===================================================================
+function initAuth() {
+  // Check if this is a magic link callback
+  completeSignIn().then(user => {
+    if (user) {
+      showToast('Accesso effettuato!', 'success');
+      // Clean URL
+      window.history.replaceState({}, '', window.location.origin + window.location.hash);
+    }
+  }).catch(err => {
+    console.error('Auth callback error:', err);
+  });
+
+  // Listen to auth state
+  onAuth(async (user) => {
+    currentUser = user;
+    updateAuthUI(user);
+    if (user) {
+      // Check membership status
+      try {
+        const memberStatus = await checkMembership(user.email);
+        if (memberStatus) {
+          document.getElementById('authMemberBadge').style.display = '';
+        }
+      } catch (e) { /* ignore */ }
+    }
+  });
+}
+
+function updateAuthUI(user) {
+  const btn = document.getElementById('navAuthBtn');
+  if (!btn) return;
+
+  if (user) {
+    // Replace text link with avatar
+    const initials = getInitials(user.email);
+    btn.className = 'nav-auth-avatar';
+    btn.textContent = initials;
+    btn.title = user.email;
+  } else {
+    btn.className = 'nav-auth';
+    btn.textContent = 'Accedi';
+    btn.title = '';
+  }
+}
+
+function getInitials(email) {
+  if (!email) return '?';
+  const name = email.split('@')[0];
+  const parts = name.split(/[._-]/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+}
+
+// Auth modal
+window.openAuthModal = function () {
+  const modal = document.getElementById('authModal');
+  const stepEmail = document.getElementById('authStepEmail');
+  const stepSent = document.getElementById('authStepSent');
+  const stepLoggedIn = document.getElementById('authStepLoggedIn');
+
+  stepEmail.style.display = 'none';
+  stepSent.style.display = 'none';
+  stepLoggedIn.style.display = 'none';
+
+  if (currentUser) {
+    // Show profile
+    stepLoggedIn.style.display = 'block';
+    document.getElementById('authModalTitle').textContent = 'Il tuo profilo';
+    document.getElementById('authAvatar').textContent = getInitials(currentUser.email);
+    document.getElementById('authUserEmail').textContent = currentUser.email;
+  } else {
+    // Show login form
+    stepEmail.style.display = 'block';
+    document.getElementById('authModalTitle').textContent = 'Accedi o registrati';
+    document.getElementById('authEmail').value = '';
+    document.getElementById('authEmailErr').classList.remove('show');
+    document.getElementById('authEmail').classList.remove('error');
+  }
+
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+};
+
+window.closeAuthModal = function () {
+  document.getElementById('authModal').classList.remove('active');
+  document.body.style.overflow = '';
+};
+
+document.getElementById('authModal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) window.closeAuthModal();
+});
+
+window.handleSendLink = async function () {
+  const input = document.getElementById('authEmail');
+  const email = input.value.trim();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    input.classList.add('error');
+    document.getElementById('authEmailErr').classList.add('show');
+    return;
+  }
+
+  input.classList.remove('error');
+  document.getElementById('authEmailErr').classList.remove('show');
+
+  try {
+    await sendLoginLink(email);
+    // Show confirmation
+    document.getElementById('authStepEmail').style.display = 'none';
+    document.getElementById('authStepSent').style.display = 'block';
+    document.getElementById('authSentEmail').textContent = email;
+    document.getElementById('authModalTitle').textContent = 'Email inviata!';
+  } catch (err) {
+    console.error('Send link error:', err);
+    showToast('Errore nell\'invio dell\'email. Riprova.', 'error');
+  }
+};
+
+window.handleLogout = async function () {
+  try {
+    await logout();
+    currentUser = null;
+    document.getElementById('authMemberBadge').style.display = 'none';
+    window.closeAuthModal();
+    showToast('Disconnesso.', 'success');
+  } catch (err) {
+    showToast('Errore durante la disconnessione.', 'error');
+  }
+};

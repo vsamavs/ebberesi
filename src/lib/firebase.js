@@ -109,7 +109,7 @@ export async function getBlogPosts() {
 
 const actionCodeSettings = {
   // URL where the user lands after clicking the email link
-  url: window.location.origin + '/auth-callback',
+  url: window.location.origin,
   handleCodeInApp: true,
 };
 
