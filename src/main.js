@@ -61,8 +61,8 @@ function renderEvents(events) {
 
     return `
       <div class="event-card reveal" data-event-id="${ev.id}">
-        <div class="event-img">
-          <div class="event-img-overlay">${ev.emoji || '🍷'}</div>
+        <div class="event-img"${ev.image ? ` style="background:url('${ev.image}') center/cover no-repeat"` : ''}>
+          ${ev.image ? '' : `<div class="event-img-overlay">${ev.emoji || '🍷'}</div>`}
           <div class="event-date-badge">
             <div class="day">${d.day}</div>
             <div class="month">${d.month}</div>
