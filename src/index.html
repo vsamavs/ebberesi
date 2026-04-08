@@ -93,10 +93,10 @@
       <div class="modal-header" style="padding-bottom:8px">
         <div class="modal-event-tag">Area Personale</div>
         <div class="modal-event-title" id="authModalTitle">Accedi o registrati</div>
-        <div class="modal-event-info">Riceverai un link di accesso via email — nessuna password necessaria.</div>
+        <div class="modal-event-info" id="authModalDesc">Inserisci la tua email per ricevere un codice di accesso.</div>
       </div>
       <div class="modal-body">
-        <!-- Send link step -->
+        <!-- Step 1: Email input -->
         <div id="authStepEmail">
           <div class="form-group">
             <label class="form-label">Email</label>
@@ -104,21 +104,26 @@
             <div class="form-error" id="authEmailErr">Inserisci un'email valida</div>
           </div>
           <div class="modal-actions">
-            <button class="modal-btn modal-btn-next" style="flex:1" onclick="handleSendLink()">Invia link di accesso</button>
+            <button class="modal-btn modal-btn-next" style="flex:1" id="btnSendOtp" onclick="handleSendOtp()">Invia codice</button>
           </div>
         </div>
-        <!-- Confirmation step -->
-        <div id="authStepSent" style="display:none">
-          <div class="step-confirm">
-            <div class="confirm-icon" style="background:var(--accent-glow)">&#9993;</div>
-            <div class="confirm-title">Controlla la tua email</div>
-            <p class="confirm-sub">Abbiamo inviato un link di accesso a <strong id="authSentEmail"></strong>. Clicca il link nell'email per accedere.</p>
+        <!-- Step 2: OTP code input -->
+        <div id="authStepOtp" style="display:none">
+          <p style="font-size:.9rem;color:var(--ink-soft);margin-bottom:20px;">Abbiamo inviato un codice a 6 cifre a <strong id="otpSentEmail"></strong></p>
+          <div class="form-group">
+            <label class="form-label">Codice di verifica</label>
+            <input class="form-input" type="text" id="authOtpCode" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="text-align:center;font-size:1.4rem;font-family:var(--serif);letter-spacing:8px;font-weight:500">
+            <div class="form-error" id="authOtpErr">Codice non valido</div>
           </div>
-          <div class="modal-actions" style="justify-content:center">
-            <button class="modal-btn modal-btn-close-final" onclick="closeAuthModal()">Chiudi</button>
+          <div class="modal-actions">
+            <button class="modal-btn modal-btn-back" onclick="handleBackToEmail()">Indietro</button>
+            <button class="modal-btn modal-btn-next" style="flex:2" id="btnVerifyOtp" onclick="handleVerifyOtp()">Verifica</button>
           </div>
+          <p style="font-size:.78rem;color:var(--ink-muted);margin-top:16px;text-align:center">
+            Non l'hai ricevuto? <a href="#" onclick="event.preventDefault();handleResendOtp()" style="color:var(--accent);text-decoration:none">Invia di nuovo</a>
+          </p>
         </div>
-        <!-- Complete profile step (shown for new users) -->
+        <!-- Step 3: Complete profile (new users) -->
         <div id="authStepProfile" style="display:none">
           <p style="font-size:.9rem;color:var(--ink-soft);margin-bottom:20px;">Completa il tuo profilo per continuare. Questi dati ci servono per gestire le prenotazioni e la tessera socio.</p>
           <div class="form-row">
@@ -147,7 +152,7 @@
             <button class="modal-btn modal-btn-next" style="flex:1" onclick="handleSaveProfile()">Salva e continua</button>
           </div>
         </div>
-        <!-- Logged in view -->
+        <!-- Step 4: Logged in view -->
         <div id="authStepLoggedIn" style="display:none">
           <div class="auth-profile">
             <div class="auth-avatar" id="authAvatar"></div>

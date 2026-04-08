@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getAuth, signInWithCustomToken, onAuthStateChanged, signOut } from 'firebase/auth';
 
 // Config from environment variables
 const firebaseConfig = {
@@ -104,35 +104,35 @@ export async function getBlogPosts() {
 }
 
 // ============================================================
-// AUTH — Email OTP (Magic Link)
+// AUTH — Email OTP
 // ============================================================
 
-const actionCodeSettings = {
-  // URL where the user lands after clicking the email link
-  url: window.location.origin,
-  handleCodeInApp: true,
-};
-
-/** Send a sign-in link to the user's email */
-export async function sendLoginLink(email) {
-  await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-  // Save the email locally so we can complete sign-in after redirect
-  window.localStorage.setItem('ebberesi_login_email', email);
+/** Send OTP code to email via serverless function */
+export async function sendOTP(email) {
+  const res = await fetch('/api/send-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Errore invio OTP');
+  return data; // { success, isExistingUser }
 }
 
-/** Complete sign-in after user clicks the email link */
-export async function completeSignIn() {
-  if (isSignInWithEmailLink(auth, window.location.href)) {
-    let email = window.localStorage.getItem('ebberesi_login_email');
-    if (!email) {
-      // Fallback: should rarely happen since we store it on send
-      return null;
-    }
-    const result = await signInWithEmailLink(auth, email, window.location.href);
-    window.localStorage.removeItem('ebberesi_login_email');
-    return result.user;
-  }
-  return null;
+/** Verify OTP code and sign in */
+export async function verifyOTP(email, code) {
+  const res = await fetch('/api/verify-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Errore verifica OTP');
+
+  // Sign in with the custom token
+  await signInWithCustomToken(auth, data.token);
+
+  return data; // { success, token, isNewUser, hasProfile }
 }
 
 /** Listen to auth state changes */

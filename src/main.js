@@ -1,4 +1,4 @@
-import { getEvents, createBooking, subscribeNewsletter, formatDate, getBlogPosts, sendLoginLink, completeSignIn, onAuth, logout, checkMembership, getUserProfile, saveUserProfile, isProfileComplete } from './lib/firebase.js';
+import { getEvents, createBooking, subscribeNewsletter, formatDate, getBlogPosts, sendOTP, verifyOTP, onAuth, logout, checkMembership, getUserProfile, saveUserProfile, isProfileComplete } from './lib/firebase.js';
 import './styles/globals.css';
 
 // ===================================================================
@@ -447,38 +447,24 @@ function showToast(message, type = 'success') {
 // AUTH
 // ===================================================================
 let userProfile = null;
+let pendingEmail = '';
 
-function initAuth() {
-  // Check if this is a magic link callback
-  completeSignIn().then(user => {
-    if (user) {
-      showToast('Accesso effettuato!', 'success');
-      // Clean URL
-      window.history.replaceState({}, '', window.location.origin + window.location.hash);
-    }
-  }).catch(err => {
-    console.error('Auth callback error:', err);
-  });
-
-  // Listen to auth state
+async function initAuth() {
   onAuth(async (user) => {
     currentUser = user;
     userProfile = null;
 
     if (user) {
-      // Load profile from Firestore
       try {
         userProfile = await getUserProfile(user.uid);
       } catch (e) { console.error('Profile load error:', e); }
 
-      // If profile incomplete, show completion modal automatically
       if (!isProfileComplete(userProfile)) {
         updateAuthUI(user);
         showProfileCompletion();
         return;
       }
 
-      // Check membership status
       try {
         const memberStatus = await checkMembership(user.email);
         if (memberStatus) {
@@ -494,7 +480,6 @@ function initAuth() {
 function updateAuthUI(user) {
   const btn = document.getElementById('navAuthBtn');
   if (!btn) return;
-
   if (user) {
     const initials = userProfile && userProfile.name && userProfile.surname
       ? (userProfile.name[0] + userProfile.surname[0]).toUpperCase()
@@ -513,9 +498,7 @@ function getInitials(email) {
   if (!email) return '?';
   const name = email.split('@')[0];
   const parts = name.split(/[._-]/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return name.substring(0, 2).toUpperCase();
 }
 
@@ -523,46 +506,39 @@ function showProfileCompletion() {
   hideAllAuthSteps();
   document.getElementById('authStepProfile').style.display = 'block';
   document.getElementById('authModalTitle').textContent = 'Completa il profilo';
+  document.getElementById('authModalDesc').textContent = 'Ancora un ultimo passaggio per completare la registrazione.';
   document.getElementById('authModal').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
 
 function hideAllAuthSteps() {
-  ['authStepEmail', 'authStepSent', 'authStepProfile', 'authStepLoggedIn'].forEach(id => {
+  ['authStepEmail', 'authStepOtp', 'authStepProfile', 'authStepLoggedIn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
 }
 
-// Auth modal
 window.openAuthModal = function () {
   hideAllAuthSteps();
-
   if (currentUser) {
-    if (!isProfileComplete(userProfile)) {
-      showProfileCompletion();
-      return;
-    }
-    // Show profile
+    if (!isProfileComplete(userProfile)) { showProfileCompletion(); return; }
     document.getElementById('authStepLoggedIn').style.display = 'block';
     document.getElementById('authModalTitle').textContent = 'Il tuo profilo';
+    document.getElementById('authModalDesc').textContent = '';
     const initials = userProfile
       ? (userProfile.name[0] + userProfile.surname[0]).toUpperCase()
       : getInitials(currentUser.email);
     document.getElementById('authAvatar').textContent = initials;
     document.getElementById('authUserEmail').textContent = currentUser.email;
-    if (userProfile) {
-      document.getElementById('authUserName').textContent = `${userProfile.name} ${userProfile.surname}`;
-    }
+    if (userProfile) document.getElementById('authUserName').textContent = `${userProfile.name} ${userProfile.surname}`;
   } else {
-    // Show login form
     document.getElementById('authStepEmail').style.display = 'block';
     document.getElementById('authModalTitle').textContent = 'Accedi o registrati';
+    document.getElementById('authModalDesc').textContent = 'Inserisci la tua email per ricevere un codice di accesso.';
     document.getElementById('authEmail').value = '';
     document.getElementById('authEmailErr').classList.remove('show');
     document.getElementById('authEmail').classList.remove('error');
   }
-
   document.getElementById('authModal').classList.add('active');
   document.body.style.overflow = 'hidden';
 };
@@ -576,33 +552,86 @@ document.getElementById('authModal')?.addEventListener('click', e => {
   if (e.target === e.currentTarget) window.closeAuthModal();
 });
 
-window.handleSendLink = async function () {
+window.handleSendOtp = async function () {
   const input = document.getElementById('authEmail');
   const email = input.value.trim();
-
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     input.classList.add('error');
     document.getElementById('authEmailErr').classList.add('show');
     return;
   }
-
   input.classList.remove('error');
   document.getElementById('authEmailErr').classList.remove('show');
-
+  const btn = document.getElementById('btnSendOtp');
+  btn.disabled = true;
+  btn.textContent = 'Invio in corso\u2026';
   try {
-    await sendLoginLink(email);
+    await sendOTP(email);
+    pendingEmail = email;
     hideAllAuthSteps();
-    document.getElementById('authStepSent').style.display = 'block';
-    document.getElementById('authSentEmail').textContent = email;
-    document.getElementById('authModalTitle').textContent = 'Email inviata!';
+    document.getElementById('authStepOtp').style.display = 'block';
+    document.getElementById('otpSentEmail').textContent = email;
+    document.getElementById('authModalTitle').textContent = 'Inserisci il codice';
+    document.getElementById('authModalDesc').textContent = '';
+    document.getElementById('authOtpCode').value = '';
+    document.getElementById('authOtpErr').classList.remove('show');
+    document.getElementById('authOtpCode').focus();
   } catch (err) {
-    console.error('Send link error:', err);
-    showToast('Errore nell\'invio dell\'email. Riprova.', 'error');
+    console.error('Send OTP error:', err);
+    showToast(err.message || 'Errore nell\'invio del codice', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Invia codice';
+  }
+};
+
+window.handleVerifyOtp = async function () {
+  const code = document.getElementById('authOtpCode').value.trim();
+  if (!/^\d{6}$/.test(code)) {
+    document.getElementById('authOtpCode').classList.add('error');
+    document.getElementById('authOtpErr').classList.add('show');
+    document.getElementById('authOtpErr').textContent = 'Inserisci un codice a 6 cifre';
+    return;
+  }
+  document.getElementById('authOtpCode').classList.remove('error');
+  document.getElementById('authOtpErr').classList.remove('show');
+  const btn = document.getElementById('btnVerifyOtp');
+  btn.disabled = true;
+  btn.textContent = 'Verifica\u2026';
+  try {
+    const result = await verifyOTP(pendingEmail, code);
+    if (result.hasProfile) {
+      showToast('Accesso effettuato!', 'success');
+      window.closeAuthModal();
+    }
+  } catch (err) {
+    console.error('Verify OTP error:', err);
+    document.getElementById('authOtpCode').classList.add('error');
+    document.getElementById('authOtpErr').classList.add('show');
+    document.getElementById('authOtpErr').textContent = err.message || 'Codice non valido';
+    btn.disabled = false;
+    btn.textContent = 'Verifica';
+  }
+};
+
+window.handleBackToEmail = function () {
+  hideAllAuthSteps();
+  document.getElementById('authStepEmail').style.display = 'block';
+  document.getElementById('authModalTitle').textContent = 'Accedi o registrati';
+  document.getElementById('authModalDesc').textContent = 'Inserisci la tua email per ricevere un codice di accesso.';
+};
+
+window.handleResendOtp = async function () {
+  if (!pendingEmail) return;
+  try {
+    await sendOTP(pendingEmail);
+    showToast('Nuovo codice inviato!', 'success');
+  } catch (err) {
+    showToast(err.message || 'Errore nel reinvio', 'error');
   }
 };
 
 window.handleSaveProfile = async function () {
-  // Validate
   let ok = true;
   const fields = [
     { id: 'profileNome', err: 'errProfileNome', test: v => v.trim().length >= 2 },
@@ -617,7 +646,6 @@ window.handleSaveProfile = async function () {
     else { inp.classList.remove('error'); err.classList.remove('show'); }
   });
   if (!ok || !currentUser) return;
-
   try {
     const profileData = {
       name: document.getElementById('profileNome').value.trim(),
@@ -627,17 +655,14 @@ window.handleSaveProfile = async function () {
       email: currentUser.email,
       createdAt: userProfile?.createdAt || new Date().toISOString(),
     };
-
     await saveUserProfile(currentUser.uid, profileData);
     userProfile = profileData;
-
     showToast('Profilo salvato!', 'success');
     updateAuthUI(currentUser);
-
-    // Show the logged-in view
     hideAllAuthSteps();
     document.getElementById('authStepLoggedIn').style.display = 'block';
     document.getElementById('authModalTitle').textContent = 'Il tuo profilo';
+    document.getElementById('authModalDesc').textContent = '';
     document.getElementById('authAvatar').textContent = (profileData.name[0] + profileData.surname[0]).toUpperCase();
     document.getElementById('authUserEmail').textContent = currentUser.email;
     document.getElementById('authUserName').textContent = `${profileData.name} ${profileData.surname}`;

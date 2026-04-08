@@ -42,6 +42,12 @@ service cloud.firestore {
       allow create, update: if request.auth != null && request.auth.uid == userId;
     }
 
+    // OTP CODES — only accessible via Admin SDK (serverless functions)
+    // No client-side access allowed for security
+    match /otp_codes/{email} {
+      allow read, write: if false;
+    }
+
     // Helper: check if user is admin
     // Replace with YOUR admin email(s)
     function isAdmin(email) {
