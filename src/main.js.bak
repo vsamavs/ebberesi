@@ -17,44 +17,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   initNav();
   initScrollReveal();
   initAuth();
-  handlePaymentReturn();
   await loadEvents();
   await loadBlog();
   initNewsletterForm();
 });
-
-// ===================================================================
-// PAYMENT RETURN — handle redirect back from Stripe/PayPal/Satispay
-// ===================================================================
-async function handlePaymentReturn() {
-  const params = new URLSearchParams(window.location.search);
-  const payment = params.get('payment');
-  const bookingId = params.get('booking');
-  const method = params.get('method');
-
-  if (!payment || !bookingId) return;
-
-  // Clean URL
-  window.history.replaceState({}, '', window.location.origin);
-
-  if (payment === 'success') {
-    // For PayPal: capture the order server-side
-    if (method === 'paypal') {
-      const token = params.get('token'); // PayPal adds this
-      try {
-        await fetch('/api/paypal-capture-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: token, bookingId }),
-        });
-      } catch (e) { console.error('PayPal capture error:', e); }
-    }
-
-    showToast('Pagamento completato! Riceverai una conferma via email.', 'success');
-  } else if (payment === 'cancelled') {
-    showToast('Pagamento annullato.', 'error');
-  }
-}
 
 // ===================================================================
 // LOAD EVENTS FROM FIREBASE
@@ -345,8 +311,6 @@ window.processPayment = async function () {
   const sub = qty * currentEvent.price;
   const disc = isMember ? sub * 0.15 : 0;
   const total = sub - disc;
-  const amountCents = Math.round(total * 100);
-  const email = document.getElementById('fieldEmail').value.trim();
 
   try {
     // Save booking to Firestore
@@ -359,7 +323,7 @@ window.processPayment = async function () {
       total,
       name: document.getElementById('fieldNome').value.trim(),
       surname: document.getElementById('fieldCognome').value.trim(),
-      email,
+      email: document.getElementById('fieldEmail').value.trim(),
       phone: document.getElementById('fieldTelefono').value.trim(),
       notes: document.getElementById('fieldNote').value.trim(),
       paymentMethod: selectedPayment,
@@ -372,34 +336,27 @@ window.processPayment = async function () {
       const res = await fetch('/api/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: currentEvent.title, qty, email }),
+        body: JSON.stringify({ bookingId, amount: Math.round(total * 100), eventTitle: currentEvent.title, qty }),
       });
-      const data = await res.json();
-      if (data.url) { window.location.href = data.url; return; }
-      throw new Error(data.error || 'Errore Stripe');
+      const { url } = await res.json();
+      if (url) { window.location.href = url; return; }
     }
 
     if (selectedPayment === 'paypal') {
-      const res = await fetch('/api/paypal-create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: currentEvent.title, qty }),
-      });
-      const data = await res.json();
-      if (data.url) { window.location.href = data.url; return; }
-      throw new Error(data.error || 'Errore PayPal');
+      // PayPal integration — redirect to PayPal checkout
+      // In production: create order via PayPal API and redirect
+      showToast('Reindirizzamento a PayPal...', 'success');
     }
 
     if (selectedPayment === 'satispay') {
-      const res = await fetch('/api/satispay-create-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: currentEvent.title }),
-      });
-      const data = await res.json();
-      if (data.redirectUrl) { window.location.href = data.redirectUrl; return; }
-      throw new Error(data.error || 'Errore Satispay');
+      // Satispay integration — open Satispay payment
+      // In production: create payment via Satispay API
+      showToast('Apri Satispay per completare il pagamento', 'success');
     }
+
+    // For demo/fallback: show confirmation
+    document.getElementById('confirmEmail').textContent = document.getElementById('fieldEmail').value;
+    window.goStep(4);
 
   } catch (err) {
     console.error('Errore pagamento:', err);
