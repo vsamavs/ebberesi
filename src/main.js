@@ -575,6 +575,9 @@ window.handleSendOtp = async function () {
     document.getElementById('authModalDesc').textContent = '';
     document.getElementById('authOtpCode').value = '';
     document.getElementById('authOtpErr').classList.remove('show');
+    document.getElementById('authOtpCode').classList.remove('error');
+    document.getElementById('btnVerifyOtp').disabled = false;
+    document.getElementById('btnVerifyOtp').textContent = 'Verifica';
     document.getElementById('authOtpCode').focus();
   } catch (err) {
     console.error('Send OTP error:', err);
