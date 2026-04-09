@@ -37,10 +37,15 @@ async function handlePaymentReturn() {
   // Clean URL
   window.history.replaceState({}, '', window.location.origin);
 
+  if (payment === 'cancelled') {
+    showToast('Pagamento annullato.', 'error');
+    return;
+  }
+
   if (payment === 'success') {
-    // For PayPal: capture the order server-side
+    // For PayPal: capture the order server-side first
     if (method === 'paypal') {
-      const token = params.get('token'); // PayPal adds this
+      const token = params.get('token');
       try {
         await fetch('/api/paypal-capture-order', {
           method: 'POST',
@@ -50,9 +55,27 @@ async function handlePaymentReturn() {
       } catch (e) { console.error('PayPal capture error:', e); }
     }
 
-    showToast('Pagamento completato! Riceverai una conferma via email.', 'success');
-  } else if (payment === 'cancelled') {
-    showToast('Pagamento annullato.', 'error');
+    // Verify actual payment status server-side (poll a few times for webhooks/callbacks)
+    let confirmed = false;
+    for (let i = 0; i < 5; i++) {
+      try {
+        const res = await fetch('/api/check-payment-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId }),
+        });
+        const data = await res.json();
+        if (data.status === 'paid') { confirmed = true; break; }
+      } catch (e) { /* retry */ }
+      // Wait 2 seconds before retrying
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    if (confirmed) {
+      showToast('Pagamento completato! Riceverai una conferma via email.', 'success');
+    } else {
+      showToast('Pagamento in attesa di conferma. Ti aggiorneremo via email.', 'error');
+    }
   }
 }
 
@@ -366,9 +389,8 @@ window.processPayment = async function () {
       isMember,
     });
 
-    // Redirect to payment provider
+    // ---- STRIPE ----
     if (selectedPayment === 'stripe') {
-      // Call Vercel serverless function to create Stripe Checkout session
       const res = await fetch('/api/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -379,6 +401,7 @@ window.processPayment = async function () {
       throw new Error(data.error || 'Errore Stripe');
     }
 
+    // ---- PAYPAL ----
     if (selectedPayment === 'paypal') {
       const res = await fetch('/api/paypal-create-order', {
         method: 'POST',
@@ -390,6 +413,7 @@ window.processPayment = async function () {
       throw new Error(data.error || 'Errore PayPal');
     }
 
+    // ---- SATISPAY ----
     if (selectedPayment === 'satispay') {
       const res = await fetch('/api/satispay-create-payment', {
         method: 'POST',
