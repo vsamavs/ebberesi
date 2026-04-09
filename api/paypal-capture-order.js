@@ -64,6 +64,11 @@ export default async function handler(req, res) {
         paymentId: capture.id,
         paidAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+
+      // Activate membership if this booking includes a new member signup
+      const { activateMembershipIfNeeded } = await import('./lib/activate-membership.js');
+      await activateMembershipIfNeeded(db, bookingId);
+
       res.status(200).json({ success: true });
     } else {
       res.status(400).json({ error: 'Pagamento non completato', status: capture.status });

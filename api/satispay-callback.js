@@ -27,6 +27,11 @@ export default async function handler(req, res) {
         paymentId: id,
         paidAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+
+      // Activate membership if this booking includes a new member signup
+      const { activateMembershipIfNeeded } = await import('./lib/activate-membership.js');
+      await activateMembershipIfNeeded(db, external_code);
+
       console.log(`Booking ${external_code} confirmed via Satispay`);
     }
 

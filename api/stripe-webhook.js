@@ -48,6 +48,11 @@ export default async function handler(req, res) {
           paymentId: session.payment_intent,
           paidAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+
+        // Activate membership if this booking includes a new member signup
+        const { activateMembershipIfNeeded } = await import('./lib/activate-membership.js');
+        await activateMembershipIfNeeded(db, bookingId);
+
         console.log(`Booking ${bookingId} confirmed via Stripe`);
       }
     }
