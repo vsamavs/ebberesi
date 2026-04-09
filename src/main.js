@@ -9,6 +9,8 @@ let blogPosts = [];
 let currentStep = 1, qty = 0, isMember = false, selectedPayment = null;
 let currentEvent = null;
 let currentUser = null;
+let isVerifiedMember = false;
+let needsMemberSignup = false;
 
 // ===================================================================
 // INIT
@@ -112,7 +114,7 @@ function renderEvents(events) {
   grid.innerHTML = events.map(ev => {
     const d = formatDate(ev.date);
     const spotsLeft = (ev.totalSpots || 30) - (ev.bookedSpots || 0);
-    const memberPrice = (ev.price * 0.85).toFixed(2).replace('.', ',');
+    const memberPrice = (ev.price * 0.90).toFixed(2).replace('.', ',');
 
     let statusClass = 'available', statusText = 'Disponibile';
     if (spotsLeft <= 0) { statusClass = 'soldout'; statusText = 'Esaurito'; }
@@ -203,18 +205,41 @@ window.openBooking = function (eventId) {
   const spotsLeft = (currentEvent.totalSpots || 30) - (currentEvent.bookedSpots || 0);
   currentEvent._spotsLeft = spotsLeft;
 
-  qty = 0; isMember = false; selectedPayment = null; currentStep = 1;
+  qty = 0; selectedPayment = null; currentStep = 1;
+  needsMemberSignup = false;
+
+  // If logged in and verified member, auto-enable and lock toggle
+  if (currentUser && isVerifiedMember) {
+    isMember = true;
+    document.getElementById('memberSwitch').classList.add('on');
+    document.getElementById('memberToggle').style.opacity = '0.7';
+    document.getElementById('memberToggle').style.pointerEvents = 'none';
+    document.getElementById('memberToggleDesc').textContent = 'Sconto applicato automaticamente';
+  } else {
+    isMember = false;
+    document.getElementById('memberSwitch').classList.remove('on');
+    document.getElementById('memberToggle').style.opacity = '';
+    document.getElementById('memberToggle').style.pointerEvents = '';
+    document.getElementById('memberToggleDesc').textContent = 'Sconto del 10% su un biglietto';
+  }
 
   // Reset UI
-  document.getElementById('memberSwitch').classList.remove('on');
   document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('selected'));
   document.getElementById('btnPay').disabled = true;
   document.getElementById('btnPay').textContent = 'Scegli un metodo';
-  ['fieldNome','fieldCognome','fieldEmail','fieldTelefono','fieldNote'].forEach(id => {
+  ['fieldNome','fieldCognome','fieldEmail','fieldTelefono','fieldNote','fieldIndirizzo','fieldCitta','fieldCAP','fieldCF'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value = ''; el.classList.remove('error'); }
   });
   document.querySelectorAll('.form-error').forEach(e => e.classList.remove('show'));
+
+  // Pre-fill form if logged in
+  if (currentUser && userProfile) {
+    document.getElementById('fieldNome').value = userProfile.name || '';
+    document.getElementById('fieldCognome').value = userProfile.surname || '';
+    document.getElementById('fieldEmail').value = currentUser.email || '';
+    document.getElementById('fieldTelefono').value = userProfile.phone || '';
+  }
 
   // Populate header
   const d = formatDate(currentEvent.date);
@@ -251,20 +276,22 @@ window.goStep = function (step) {
   document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
   document.querySelector(`[data-panel="${step}"]`).classList.add('active');
 
+  // Update step dots (2b maps to step 2 visually)
+  const numericStep = step === '2b' ? 2.5 : (typeof step === 'string' ? parseInt(step) : step);
   document.querySelectorAll('.step-dot').forEach(d => {
     const s = +d.dataset.step;
     d.className = 'step-dot';
-    if (s === step) d.classList.add('active');
-    else if (s < step) d.classList.add('done');
+    if (s <= Math.floor(numericStep) && s < Math.ceil(numericStep)) d.classList.add('done');
+    else if (s === Math.ceil(numericStep)) d.classList.add('active');
   });
   document.querySelectorAll('.step-label').forEach((l, i) => {
     l.className = 'step-label';
-    if (i + 1 === step) l.classList.add('active');
-    else if (i + 1 < step) l.classList.add('done');
+    if (i + 1 < numericStep) l.classList.add('done');
+    else if (i + 1 <= numericStep) l.classList.add('active');
   });
 
-  if (step === 3) populateRecap();
-  if (step === 4) {
+  if (step === 3 || step === '3') populateRecap();
+  if (step === 4 || step === '4') {
     document.getElementById('stepsBar').style.display = 'none';
     document.getElementById('stepLabels').style.display = 'none';
   }
@@ -289,19 +316,37 @@ function updateQtyUI() {
   if (qty > 0 && currentEvent) {
     s.style.display = 'block';
     const sub = qty * currentEvent.price;
-    const disc = isMember ? sub * 0.15 : 0;
+    // 10% discount on ONE ticket only
+    const disc = isMember ? currentEvent.price * 0.10 : 0;
+    // Membership fee if toggling socio but not yet a member
+    const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
+    const total = sub - disc + memberFee;
+
     document.getElementById('summaryQtyLabel').textContent = `${qty}\u00D7 Biglietto`;
     document.getElementById('summarySubtotal').textContent = fmt(sub);
     document.getElementById('summaryDiscountRow').style.display = isMember ? 'flex' : 'none';
     document.getElementById('summaryDiscount').textContent = '\u2212' + fmt(disc);
-    document.getElementById('summaryTotal').textContent = fmt(sub - disc);
+    document.getElementById('summaryMemberFeeRow').style.display = (isMember && !isVerifiedMember) ? 'flex' : 'none';
+    document.getElementById('summaryTotal').textContent = fmt(total);
   } else {
     s.style.display = 'none';
   }
 }
 
 window.toggleMember = function () {
+  // If already a verified member, toggle is locked — do nothing
+  if (isVerifiedMember) return;
+
+  // If not logged in, prompt login first
+  if (!currentUser) {
+    window.closeBooking();
+    window.openAuthModal();
+    showToast('Accedi per usufruire dello sconto socio', 'success');
+    return;
+  }
+
   isMember = !isMember;
+  needsMemberSignup = isMember && !isVerifiedMember;
   document.getElementById('memberSwitch').classList.toggle('on', isMember);
   updateQtyUI();
 };
@@ -309,7 +354,7 @@ window.toggleMember = function () {
 // ===================================================================
 // FORM VALIDATION
 // ===================================================================
-window.validateAndGoStep3 = function () {
+window.validateStep2 = function () {
   let ok = true;
   const fields = [
     { id: 'fieldNome', err: 'errNome', test: v => v.trim().length >= 2 },
@@ -323,7 +368,31 @@ window.validateAndGoStep3 = function () {
     if (!f.test(inp.value)) { inp.classList.add('error'); err.classList.add('show'); ok = false; }
     else { inp.classList.remove('error'); err.classList.remove('show'); }
   });
-  if (ok) window.goStep(3);
+  if (!ok) return;
+
+  // If user wants to become a member but isn't yet, show membership form
+  if (needsMemberSignup) {
+    goStep('2b');
+  } else {
+    goStep(3);
+  }
+};
+
+window.validateMembershipAndContinue = function () {
+  let ok = true;
+  const fields = [
+    { id: 'fieldIndirizzo', err: 'errIndirizzo', test: v => v.trim().length >= 3 },
+    { id: 'fieldCitta', err: 'errCitta', test: v => v.trim().length >= 2 },
+    { id: 'fieldCAP', err: 'errCAP', test: v => /^\d{5}$/.test(v.trim()) },
+    { id: 'fieldCF', err: 'errCF', test: v => /^[A-Z0-9]{16}$/i.test(v.trim()) },
+  ];
+  fields.forEach(f => {
+    const inp = document.getElementById(f.id);
+    const err = document.getElementById(f.err);
+    if (!f.test(inp.value)) { inp.classList.add('error'); err.classList.add('show'); ok = false; }
+    else { inp.classList.remove('error'); err.classList.remove('show'); }
+  });
+  if (ok) goStep(3);
 };
 
 // ===================================================================
@@ -332,7 +401,9 @@ window.validateAndGoStep3 = function () {
 function populateRecap() {
   if (!currentEvent) return;
   const sub = qty * currentEvent.price;
-  const disc = isMember ? sub * 0.15 : 0;
+  const disc = isMember ? currentEvent.price * 0.10 : 0;
+  const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
+  const total = sub - disc + memberFee;
   const d = formatDate(currentEvent.date);
 
   document.getElementById('recapEvent').textContent = currentEvent.title;
@@ -341,9 +412,10 @@ function populateRecap() {
   document.getElementById('recapSubtotal').textContent = fmt(sub);
   document.getElementById('recapDiscountRow').style.display = isMember ? 'flex' : 'none';
   document.getElementById('recapDiscount').textContent = '\u2212' + fmt(disc);
+  document.getElementById('recapMemberFeeRow').style.display = (isMember && !isVerifiedMember) ? 'flex' : 'none';
   document.getElementById('recapName').textContent =
     document.getElementById('fieldNome').value + ' ' + document.getElementById('fieldCognome').value;
-  document.getElementById('recapTotal').textContent = fmt(sub - disc);
+  document.getElementById('recapTotal').textContent = fmt(total);
 }
 
 // ===================================================================
@@ -366,19 +438,21 @@ window.processPayment = async function () {
   btn.textContent = 'Elaborazione\u2026';
 
   const sub = qty * currentEvent.price;
-  const disc = isMember ? sub * 0.15 : 0;
-  const total = sub - disc;
+  const disc = isMember ? currentEvent.price * 0.10 : 0;
+  const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
+  const total = sub - disc + memberFee;
   const amountCents = Math.round(total * 100);
   const email = document.getElementById('fieldEmail').value.trim();
 
   try {
     // Save booking to Firestore
-    const bookingId = await createBooking({
+    const bookingData = {
       eventId: currentEvent.id,
       eventTitle: currentEvent.title,
       qty,
       unitPrice: currentEvent.price,
       discount: disc,
+      memberFee,
       total,
       name: document.getElementById('fieldNome').value.trim(),
       surname: document.getElementById('fieldCognome').value.trim(),
@@ -387,7 +461,20 @@ window.processPayment = async function () {
       notes: document.getElementById('fieldNote').value.trim(),
       paymentMethod: selectedPayment,
       isMember,
-    });
+      isNewMember: needsMemberSignup,
+    };
+
+    // Add membership data if signing up
+    if (needsMemberSignup) {
+      bookingData.membershipData = {
+        address: document.getElementById('fieldIndirizzo').value.trim(),
+        city: document.getElementById('fieldCitta').value.trim(),
+        cap: document.getElementById('fieldCAP').value.trim(),
+        codiceFiscale: document.getElementById('fieldCF').value.trim().toUpperCase(),
+      };
+    }
+
+    const bookingId = await createBooking(bookingData);
 
     // ---- STRIPE ----
     if (selectedPayment === 'stripe') {
@@ -535,9 +622,12 @@ async function initAuth() {
       try {
         const memberStatus = await checkMembership(user.email);
         if (memberStatus) {
+          isVerifiedMember = true;
           document.getElementById('authMemberBadge').style.display = '';
+        } else {
+          isVerifiedMember = false;
         }
-      } catch (e) { /* ignore */ }
+      } catch (e) { isVerifiedMember = false; }
     }
 
     updateAuthUI(user);

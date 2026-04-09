@@ -222,8 +222,13 @@
         <!-- STEP 1 -->
         <div class="step-panel active" data-panel="1">
           <div class="ticket-row"><div><div class="ticket-type-label">Biglietto Intero</div><div class="ticket-type-price" id="ticketPriceLabel"></div></div><div class="qty-control"><button class="qty-btn" onclick="changeQty(-1)" id="qtyMinus" disabled>&minus;</button><span class="qty-num" id="qtyNum">0</span><button class="qty-btn" onclick="changeQty(1)" id="qtyPlus">&plus;</button></div></div>
-          <div class="member-toggle" onclick="toggleMember()"><div class="toggle-switch" id="memberSwitch"></div><div class="member-toggle-text"><strong>Sono socio Ebbe Resi</strong><small>Sconto del 15% sul totale</small></div></div>
-          <div class="order-summary" id="orderSummary" style="display:none"><div class="order-line"><span id="summaryQtyLabel"></span><span id="summarySubtotal"></span></div><div class="order-line discount" id="summaryDiscountRow" style="display:none"><span>Sconto socio (&minus;15%)</span><span id="summaryDiscount"></span></div><div class="order-total"><span>Totale</span><span id="summaryTotal"></span></div></div>
+          <div class="member-toggle" id="memberToggle" onclick="toggleMember()"><div class="toggle-switch" id="memberSwitch"></div><div class="member-toggle-text"><strong>Sono socio Ebbe Resi</strong><small id="memberToggleDesc">Sconto del 10% su un biglietto</small></div></div>
+          <div class="order-summary" id="orderSummary" style="display:none">
+            <div class="order-line"><span id="summaryQtyLabel"></span><span id="summarySubtotal"></span></div>
+            <div class="order-line discount" id="summaryDiscountRow" style="display:none"><span>Sconto socio (&minus;10% su 1 biglietto)</span><span id="summaryDiscount"></span></div>
+            <div class="order-line" id="summaryMemberFeeRow" style="display:none"><span>Tesseramento socio</span><span>€10,00</span></div>
+            <div class="order-total"><span>Totale</span><span id="summaryTotal"></span></div>
+          </div>
           <div class="modal-actions"><button class="modal-btn modal-btn-next" id="btnStep1Next" disabled onclick="goStep(2)">Continua</button></div>
         </div>
         <!-- STEP 2 -->
@@ -233,11 +238,25 @@
           <div class="form-group"><label class="form-label">Telefono *</label><input class="form-input" type="tel" id="fieldTelefono" placeholder="+39 333 1234567"><div class="form-error" id="errTelefono">Inserisci il numero di telefono</div></div>
           <div class="form-group"><label class="form-label">Note (opzionale)</label><input class="form-input" type="text" id="fieldNote" placeholder="Allergie, intolleranze, richieste..."></div>
           <p class="form-note">* I campi contrassegnati sono obbligatori.</p>
-          <div class="modal-actions"><button class="modal-btn modal-btn-back" onclick="goStep(1)">Indietro</button><button class="modal-btn modal-btn-next" onclick="validateAndGoStep3()">Continua</button></div>
+          <div class="modal-actions"><button class="modal-btn modal-btn-back" onclick="goStep(1)">Indietro</button><button class="modal-btn modal-btn-next" onclick="validateStep2()">Continua</button></div>
+        </div>
+        <!-- STEP 2B: Membership signup (shown only for non-members who toggled socio) -->
+        <div class="step-panel" data-panel="2b">
+          <div style="padding:16px 20px;background:var(--gold-soft);border-radius:var(--radius-sm);margin-bottom:20px">
+            <strong style="color:var(--ink);font-size:.92rem">Diventa socio Ebbe Resi</strong>
+            <p style="font-size:.82rem;color:var(--ink-soft);margin-top:4px;line-height:1.5">Completa i dati per il tesseramento. Il costo della tessera (€10,00) sarà incluso nel totale del pagamento.</p>
+          </div>
+          <div class="form-group"><label class="form-label">Indirizzo di residenza *</label><input class="form-input" type="text" id="fieldIndirizzo" placeholder="Via Roma 42"><div class="form-error" id="errIndirizzo">Inserisci il tuo indirizzo</div></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Città *</label><input class="form-input" type="text" id="fieldCitta" placeholder="Torino"><div class="form-error" id="errCitta">Inserisci la città</div></div>
+            <div class="form-group"><label class="form-label">CAP *</label><input class="form-input" type="text" id="fieldCAP" placeholder="10100" maxlength="5"><div class="form-error" id="errCAP">Inserisci il CAP</div></div>
+          </div>
+          <div class="form-group"><label class="form-label">Codice Fiscale *</label><input class="form-input" type="text" id="fieldCF" placeholder="RSSMRA90A01H501Z" maxlength="16" style="text-transform:uppercase"><div class="form-error" id="errCF">Inserisci il codice fiscale</div></div>
+          <div class="modal-actions"><button class="modal-btn modal-btn-back" onclick="goStep(2)">Indietro</button><button class="modal-btn modal-btn-next" onclick="validateMembershipAndContinue()">Continua al pagamento</button></div>
         </div>
         <!-- STEP 3 -->
         <div class="step-panel" data-panel="3">
-          <div class="payment-recap"><div class="payment-recap-title">Riepilogo ordine</div><div class="payment-recap-row"><span id="recapEvent"></span><span id="recapDate"></span></div><div class="payment-recap-row"><span id="recapQty"></span><span id="recapSubtotal"></span></div><div class="payment-recap-row" id="recapDiscountRow" style="display:none"><span>Sconto socio (&minus;15%)</span><span id="recapDiscount"></span></div><div class="payment-recap-row"><span>Intestato a</span><span id="recapName"></span></div><div class="payment-recap-total"><span>Totale da pagare</span><span id="recapTotal"></span></div></div>
+          <div class="payment-recap"><div class="payment-recap-title">Riepilogo ordine</div><div class="payment-recap-row"><span id="recapEvent"></span><span id="recapDate"></span></div><div class="payment-recap-row"><span id="recapQty"></span><span id="recapSubtotal"></span></div><div class="payment-recap-row" id="recapDiscountRow" style="display:none"><span>Sconto socio (&minus;10% su 1 biglietto)</span><span id="recapDiscount"></span></div><div class="payment-recap-row" id="recapMemberFeeRow" style="display:none"><span>Tesseramento socio</span><span>€10,00</span></div><div class="payment-recap-row"><span>Intestato a</span><span id="recapName"></span></div><div class="payment-recap-total"><span>Totale da pagare</span><span id="recapTotal"></span></div></div>
           <div class="payment-methods">
             <div class="payment-option" onclick="selectPayment('stripe')" data-method="stripe"><div class="payment-radio"><div class="payment-radio-dot"></div></div><div class="payment-icon stripe">Stripe</div><div class="payment-info"><div class="payment-name">Carta di credito / debito</div><div class="payment-desc">Visa, Mastercard, Amex</div></div></div>
             <div class="payment-option" onclick="selectPayment('paypal')" data-method="paypal"><div class="payment-radio"><div class="payment-radio-dot"></div></div><div class="payment-icon paypal">PayPal</div><div class="payment-info"><div class="payment-name">PayPal</div><div class="payment-desc">Paga con il tuo conto PayPal</div></div></div>
@@ -275,13 +294,13 @@
       <div class="membership-text reveal">
         <p>Diventando socio Ebbe Resi accedi a un mondo di vantaggi esclusivi.</p>
         <ul class="membership-perks">
-          <li><div class="perk-icon">%</div><div><strong>15% di sconto</strong> su tutti gli eventi e le degustazioni</div></li>
+          <li><div class="perk-icon">%</div><div><strong>10% di sconto</strong> su un biglietto per ogni evento</div></li>
           <li><div class="perk-icon">&#9733;</div><div><strong>Accesso prioritario</strong> alla prenotazione degli eventi</div></li>
           <li><div class="perk-icon">&#127873;</div><div><strong>Eventi esclusivi</strong> riservati ai soci</div></li>
           <li><div class="perk-icon">&#128231;</div><div><strong>Newsletter dedicata</strong> con contenuti premium</div></li>
         </ul>
       </div>
-      <div class="membership-card reveal"><div class="price-tag">Tessera Annuale</div><div class="price">€25 <small>/anno</small></div><div class="price-note">Valida 12 mesi dalla data di iscrizione</div><button class="btn-gold">Diventa Socio</button></div>
+      <div class="membership-card reveal"><div class="price-tag">Tessera Annuale</div><div class="price">€10 <small>/anno</small></div><div class="price-note">Valida 12 mesi dalla data di iscrizione</div><button class="btn-gold">Diventa Socio</button></div>
     </div>
   </section>
 
