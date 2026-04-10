@@ -114,19 +114,36 @@ function renderEvents(events) {
   grid.innerHTML = events.map(ev => {
     const d = formatDate(ev.date);
     const spotsLeft = (ev.totalSpots || 30) - (ev.bookedSpots || 0);
-    const memberPrice = (ev.price * 0.90).toFixed(2).replace('.', ',');
+    const memberPrice = (ev.price * 0.85).toFixed(2).replace('.', ',');
+
+    // Status logic based on Firestore status field
+    const isBookable = ev.status === 'available' && spotsLeft > 0;
+    const isPlanning = ev.status === 'planning' || ev.status === 'draft';
+    const isSoldOut = ev.status === 'available' && spotsLeft <= 0;
+    const fewSpots = ev.status === 'available' && spotsLeft > 0 && spotsLeft <= 8;
 
     let statusClass = 'available', statusText = 'Disponibile';
-    if (spotsLeft <= 0) { statusClass = 'soldout'; statusText = 'Esaurito'; }
-    else if (spotsLeft <= 8) { statusClass = 'few'; statusText = 'Ultimi Posti'; }
+    if (isPlanning) { statusClass = 'planning'; statusText = 'In programmazione'; }
+    else if (isSoldOut) { statusClass = 'soldout'; statusText = 'Esaurito'; }
+    else if (fewSpots) { statusClass = 'few'; statusText = 'Ultimi Posti'; }
+
+    // Button logic
+    let actionButton;
+    if (isPlanning) {
+      actionButton = `<span class="btn-book-planning">In programmazione</span>`;
+    } else if (isBookable) {
+      actionButton = `<button class="btn-book" onclick="window.openBooking('${ev.id}')">Prenota</button>`;
+    } else {
+      actionButton = `<button class="btn-book" disabled style="opacity:0.4;cursor:default">Esaurito</button>`;
+    }
 
     return `
       <div class="event-card reveal" data-event-id="${ev.id}">
-        <div class="event-img"${ev.image ? ` style="background:url('${ev.image}') center/cover no-repeat"` : ''}>
+        <div class="event-img"${ev.image ? ` style="background:url('${ev.image}') center/cover no-repeat"` : ''}${isPlanning ? ' class="event-img-planning"' : ''}>
           ${ev.image ? '' : `<div class="event-img-overlay">${ev.emoji || '🍷'}</div>`}
           <div class="event-date-badge">
-            <div class="day">${d.day}</div>
-            <div class="month">${d.month}</div>
+            <div class="day">${d.day || '?'}</div>
+            <div class="month">${d.month || 'TBD'}</div>
           </div>
           <span class="event-status ${statusClass}">${statusText}</span>
         </div>
@@ -135,23 +152,20 @@ function renderEvents(events) {
           <div class="event-meta">
             <span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              ${d.time}
+              ${d.time || 'Da definire'}
             </span>
             <span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              ${ev.location}
+              ${ev.location || 'Da definire'}
             </span>
           </div>
           <p>${ev.description || ''}</p>
+          ${ev.longDescription ? `<button class="btn-event-detail" onclick="window.openEventDetail('${ev.id}')">Scopri di più</button>` : ''}
           <div class="event-footer">
             <div class="event-price">
-              €${ev.price}
-              <span class="member-price">Soci: €${memberPrice}</span>
+              ${isPlanning ? '<span style="font-size:.9rem;font-family:var(--sans)">Prezzo da definire</span>' : `€${ev.price}<span class="member-price">Soci: €${memberPrice}</span>`}
             </div>
-            ${spotsLeft > 0
-              ? `<button class="btn-book" onclick="window.openBooking('${ev.id}')">Prenota</button>`
-              : `<button class="btn-book" disabled style="opacity:0.4;cursor:default">Esaurito</button>`
-            }
+            ${actionButton}
           </div>
         </div>
       </div>
@@ -220,7 +234,7 @@ window.openBooking = function (eventId) {
     document.getElementById('memberSwitch').classList.remove('on');
     document.getElementById('memberToggle').style.opacity = '';
     document.getElementById('memberToggle').style.pointerEvents = '';
-    document.getElementById('memberToggleDesc').textContent = 'Sconto del 10% su un biglietto';
+    document.getElementById('memberToggleDesc').textContent = 'Sconto del 15% su un biglietto';
   }
 
   // Reset UI
@@ -261,6 +275,48 @@ window.closeBooking = function () {
   document.getElementById('bookingModal').classList.remove('active');
   document.body.style.overflow = '';
 };
+
+// ===================================================================
+// EVENT DETAIL MODAL
+// ===================================================================
+window.openEventDetail = function (eventId) {
+  const ev = events.find(e => e.id === eventId);
+  if (!ev || !ev.longDescription) return;
+
+  const d = formatDate(ev.date);
+  const modal = document.getElementById('eventDetailModal');
+  const isBookable = ev.status === 'available' && ((ev.totalSpots || 30) - (ev.bookedSpots || 0)) > 0;
+
+  document.getElementById('detailTitle').textContent = ev.title;
+  document.getElementById('detailDate').textContent = d.full || 'Data da definire';
+  document.getElementById('detailLocation').textContent = ev.location || 'Location da definire';
+
+  // Convert double newlines to paragraphs
+  const paragraphs = ev.longDescription.split(/\n\n+/).map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+  document.getElementById('detailBody').innerHTML = paragraphs;
+
+  // Show/hide booking button
+  const detailActions = document.getElementById('detailActions');
+  if (isBookable) {
+    detailActions.innerHTML = `<button class="modal-btn modal-btn-next" style="flex:1" onclick="closeEventDetail();window.openBooking('${ev.id}')">Prenota questo evento</button>`;
+  } else if (ev.status === 'planning') {
+    detailActions.innerHTML = `<p style="text-align:center;color:var(--ink-muted);font-size:.88rem">Evento in fase di programmazione — le prenotazioni apriranno presto.</p>`;
+  } else {
+    detailActions.innerHTML = `<p style="text-align:center;color:var(--ink-muted);font-size:.88rem">Evento esaurito.</p>`;
+  }
+
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+};
+
+window.closeEventDetail = function () {
+  document.getElementById('eventDetailModal').classList.remove('active');
+  document.body.style.overflow = '';
+};
+
+document.getElementById('eventDetailModal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) window.closeEventDetail();
+});
 
 // Close on overlay / Escape
 document.getElementById('bookingModal')?.addEventListener('click', e => {
@@ -316,8 +372,8 @@ function updateQtyUI() {
   if (qty > 0 && currentEvent) {
     s.style.display = 'block';
     const sub = qty * currentEvent.price;
-    // 10% discount on ONE ticket only
-    const disc = isMember ? currentEvent.price * 0.10 : 0;
+    // 15% discount on ONE ticket only
+    const disc = isMember ? currentEvent.price * 0.15 : 0;
     // Membership fee if toggling socio but not yet a member
     const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
     const total = sub - disc + memberFee;
@@ -401,7 +457,7 @@ window.validateMembershipAndContinue = function () {
 function populateRecap() {
   if (!currentEvent) return;
   const sub = qty * currentEvent.price;
-  const disc = isMember ? currentEvent.price * 0.10 : 0;
+  const disc = isMember ? currentEvent.price * 0.15 : 0;
   const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
   const total = sub - disc + memberFee;
   const d = formatDate(currentEvent.date);
@@ -438,7 +494,7 @@ window.processPayment = async function () {
   btn.textContent = 'Elaborazione\u2026';
 
   const sub = qty * currentEvent.price;
-  const disc = isMember ? currentEvent.price * 0.10 : 0;
+  const disc = isMember ? currentEvent.price * 0.15 : 0;
   const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
   const total = sub - disc + memberFee;
   const amountCents = Math.round(total * 100);
