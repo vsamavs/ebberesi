@@ -610,11 +610,19 @@ function initNav() {
   window.addEventListener('scroll', () =>
     document.getElementById('nav').classList.toggle('scrolled', scrollY > 20)
   );
-  document.getElementById('navToggle')?.addEventListener('click', () =>
-    document.getElementById('navLinks').classList.toggle('open')
-  );
+  document.getElementById('navToggle')?.addEventListener('click', () => {
+    const links = document.getElementById('navLinks');
+    const toggle = document.getElementById('navToggle');
+    links.classList.toggle('open');
+    toggle.classList.toggle('active');
+    document.body.style.overflow = links.classList.contains('open') ? 'hidden' : '';
+  });
   document.querySelectorAll('.nav-links a').forEach(a =>
-    a.addEventListener('click', () => document.getElementById('navLinks').classList.remove('open'))
+    a.addEventListener('click', () => {
+      document.getElementById('navLinks').classList.remove('open');
+      document.getElementById('navToggle').classList.remove('active');
+      document.body.style.overflow = '';
+    })
   );
 }
 
