@@ -1,4 +1,4 @@
-import { getEvents, createBooking, subscribeNewsletter, formatDate, getBlogPosts, sendOTP, verifyOTP, onAuth, logout, checkMembership, getUserProfile, saveUserProfile, isProfileComplete } from './lib/firebase.js';
+import { getEvents, createBooking, subscribeNewsletter, formatDate, getBlogPosts, sendOTP, verifyOTP, onAuth, logout, checkMembership, getMembershipInfo, createMembershipBooking, getUserProfile, saveUserProfile, isProfileComplete } from './lib/firebase.js';
 import './styles/globals.css';
 
 // ===================================================================
@@ -11,6 +11,7 @@ let currentEvent = null;
 let currentUser = null;
 let isVerifiedMember = false;
 let needsMemberSignup = false;
+let membershipInfo = null;
 
 // ===================================================================
 // INIT
@@ -691,6 +692,8 @@ async function initAuth() {
         } else {
           isVerifiedMember = false;
         }
+        membershipInfo = await getMembershipInfo(user.email);
+        updateMembershipCard();
       } catch (e) { isVerifiedMember = false; }
     }
 
@@ -901,10 +904,231 @@ window.handleLogout = async function () {
     await logout();
     currentUser = null;
     userProfile = null;
+    isVerifiedMember = false;
+    membershipInfo = null;
     document.getElementById('authMemberBadge').style.display = 'none';
+    updateMembershipCard();
     window.closeAuthModal();
     showToast('Disconnesso.', 'success');
   } catch (err) {
     showToast('Errore durante la disconnessione.', 'error');
+  }
+};
+
+// ===================================================================
+// MEMBERSHIP CARD & MODAL
+// ===================================================================
+let selectedMemPayment = null;
+
+function updateMembershipCard() {
+  const btn = document.getElementById('membershipCardBtn');
+  const tag = document.getElementById('membershipCardTag');
+  const note = document.getElementById('membershipCardNote');
+
+  if (!btn) return;
+
+  if (currentUser && membershipInfo && membershipInfo.active) {
+    if (membershipInfo.isExpiring) {
+      tag.textContent = 'Rinnovo Tessera';
+      note.textContent = `La tua tessera scade tra ${membershipInfo.daysUntilExpiry} giorni`;
+      btn.textContent = 'Rinnova Tessera';
+    } else if (membershipInfo.isExpired) {
+      tag.textContent = 'Tessera Scaduta';
+      note.textContent = 'La tua tessera è scaduta — rinnova per continuare a usufruire dei vantaggi';
+      btn.textContent = 'Rinnova Tessera';
+    } else {
+      tag.textContent = 'Tessera Attiva';
+      const exp = membershipInfo.expiresAt;
+      const months = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+      note.textContent = `Valida fino al ${exp.getDate()} ${months[exp.getMonth()]} ${exp.getFullYear()}`;
+      btn.textContent = 'Sei già socio ✓';
+      btn.style.opacity = '0.6';
+      btn.style.pointerEvents = 'none';
+      return;
+    }
+  } else {
+    tag.textContent = 'Tessera Annuale';
+    note.textContent = 'Valida 12 mesi dalla data di iscrizione';
+    btn.textContent = 'Diventa Socio';
+  }
+  btn.style.opacity = '';
+  btn.style.pointerEvents = '';
+}
+
+window.handleMembershipAction = function () {
+  // Not logged in → login first
+  if (!currentUser) {
+    window.openAuthModal();
+    showToast('Accedi per procedere con il tesseramento', 'success');
+    return;
+  }
+
+  // Already a member and not expiring → do nothing
+  if (membershipInfo && membershipInfo.active && !membershipInfo.isExpiring && !membershipInfo.isExpired) {
+    return;
+  }
+
+  // Open membership modal
+  openMembershipModal();
+};
+
+function openMembershipModal() {
+  const isRenewal = membershipInfo && (membershipInfo.isExpiring || membershipInfo.isExpired);
+
+  document.getElementById('memModalTag').textContent = isRenewal ? 'Rinnovo' : 'Tesseramento';
+  document.getElementById('memModalTitle').textContent = isRenewal ? 'Rinnova la tua tessera' : 'Diventa socio Ebbe Resi';
+  document.getElementById('memModalDesc').textContent = isRenewal
+    ? 'Rinnova la tessera per continuare a usufruire dei vantaggi socio.'
+    : 'Compila i dati per completare il tesseramento.';
+
+  // Pre-fill if we have data from existing membership
+  if (isRenewal && membershipInfo) {
+    document.getElementById('memIndirizzo').value = membershipInfo.address || '';
+    document.getElementById('memCitta').value = membershipInfo.city || '';
+    document.getElementById('memCAP').value = membershipInfo.cap || '';
+    document.getElementById('memCF').value = membershipInfo.codiceFiscale || '';
+  } else {
+    ['memIndirizzo', 'memCitta', 'memCAP', 'memCF'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.value = ''; el.classList.remove('error'); }
+    });
+  }
+
+  // Validity note
+  if (isRenewal && membershipInfo.expiresAt) {
+    const newExpiry = new Date(membershipInfo.expiresAt);
+    newExpiry.setFullYear(newExpiry.getFullYear() + 1);
+    const months = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    document.getElementById('memValidityNote').textContent =
+      `Valida fino al ${newExpiry.getDate()} ${months[newExpiry.getMonth()]} ${newExpiry.getFullYear()}`;
+  } else {
+    document.getElementById('memValidityNote').textContent = 'Valida 12 mesi dalla data di iscrizione';
+  }
+
+  // Confirmation text
+  document.getElementById('memConfirmTitle').textContent = isRenewal ? 'Tessera rinnovata!' : 'Benvenuto nel club!';
+  document.getElementById('memConfirmSub').textContent = isRenewal
+    ? 'La tua tessera è stata rinnovata. Continua a goderti il 15% di sconto!'
+    : 'La tua tessera socio è attiva. Da ora hai il 15% di sconto su un biglietto per ogni evento.';
+
+  // Reset payment
+  selectedMemPayment = null;
+  document.querySelectorAll('#membershipModal .payment-option').forEach(o => o.classList.remove('selected'));
+  document.getElementById('btnMemPay').disabled = true;
+  document.getElementById('btnMemPay').textContent = 'Scegli un metodo';
+  document.querySelectorAll('#membershipModal .form-error').forEach(e => e.classList.remove('show'));
+
+  // Show form, hide confirmation
+  document.getElementById('memStepForm').style.display = 'block';
+  document.getElementById('memStepDone').style.display = 'none';
+
+  document.getElementById('membershipModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+window.closeMembershipModal = function () {
+  document.getElementById('membershipModal').classList.remove('active');
+  document.body.style.overflow = '';
+};
+
+document.getElementById('membershipModal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) window.closeMembershipModal();
+});
+
+window.selectMemPayment = function (method) {
+  selectedMemPayment = method;
+  document.querySelectorAll('#membershipModal .payment-option').forEach(o =>
+    o.classList.toggle('selected', o.getAttribute('data-mem-method') === method)
+  );
+  document.getElementById('btnMemPay').disabled = false;
+  const labels = { stripe: 'Paga €10 con carta', paypal: 'Paga €10 con PayPal', satispay: 'Paga €10 con Satispay' };
+  document.getElementById('btnMemPay').textContent = labels[method];
+};
+
+window.processMembershipPayment = async function () {
+  // Validate form
+  let ok = true;
+  const fields = [
+    { id: 'memIndirizzo', err: 'errMemIndirizzo', test: v => v.trim().length >= 3 },
+    { id: 'memCitta', err: 'errMemCitta', test: v => v.trim().length >= 2 },
+    { id: 'memCAP', err: 'errMemCAP', test: v => /^\d{5}$/.test(v.trim()) },
+    { id: 'memCF', err: 'errMemCF', test: v => /^[A-Z0-9]{16}$/i.test(v.trim()) },
+  ];
+  fields.forEach(f => {
+    const inp = document.getElementById(f.id);
+    const err = document.getElementById(f.err);
+    if (!f.test(inp.value)) { inp.classList.add('error'); err.classList.add('show'); ok = false; }
+    else { inp.classList.remove('error'); err.classList.remove('show'); }
+  });
+  if (!ok || !selectedMemPayment || !currentUser) return;
+
+  const btn = document.getElementById('btnMemPay');
+  btn.disabled = true;
+  btn.textContent = 'Elaborazione\u2026';
+
+  const isRenewal = membershipInfo && (membershipInfo.isExpiring || membershipInfo.isExpired);
+
+  try {
+    // Create a membership booking
+    const bookingId = await createMembershipBooking({
+      email: currentUser.email,
+      name: userProfile?.name || '',
+      surname: userProfile?.surname || '',
+      phone: userProfile?.phone || '',
+      isNewMember: true,
+      isRenewal,
+      memberFee: 10,
+      total: 10,
+      paymentMethod: selectedMemPayment,
+      membershipData: {
+        address: document.getElementById('memIndirizzo').value.trim(),
+        city: document.getElementById('memCitta').value.trim(),
+        cap: document.getElementById('memCAP').value.trim(),
+        codiceFiscale: document.getElementById('memCF').value.trim().toUpperCase(),
+      },
+      // For renewal: store the old expiry so backend can calculate new one
+      renewFromDate: isRenewal && membershipInfo.expiresAt ? membershipInfo.expiresAt.toISOString() : null,
+    });
+
+    const amountCents = 1000; // €10
+
+    // Route to payment provider
+    let payUrl = null;
+    if (selectedMemPayment === 'stripe') {
+      const res = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbe Resi', qty: 1, email: currentUser.email }),
+      });
+      const data = await res.json();
+      payUrl = data.url;
+    } else if (selectedMemPayment === 'paypal') {
+      const res = await fetch('/api/paypal-create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbe Resi', qty: 1 }),
+      });
+      const data = await res.json();
+      payUrl = data.url;
+    } else if (selectedMemPayment === 'satispay') {
+      const res = await fetch('/api/satispay-create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbe Resi' }),
+      });
+      const data = await res.json();
+      payUrl = data.redirectUrl;
+    }
+
+    if (payUrl) {
+      window.location.href = payUrl;
+    } else {
+      throw new Error('Errore nel pagamento');
+    }
+  } catch (err) {
+    console.error('Membership payment error:', err);
+    showToast('Errore durante il pagamento. Riprova.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Riprova';
   }
 };

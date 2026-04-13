@@ -320,9 +320,57 @@
           <li><div class="perk-icon">&#128231;</div><div><strong>Newsletter dedicata</strong> con contenuti premium</div></li>
         </ul>
       </div>
-      <div class="membership-card reveal"><div class="price-tag">Tessera Annuale</div><div class="price">€10 <small>/anno</small></div><div class="price-note">Valida 12 mesi dalla data di iscrizione</div><button class="btn-gold">Diventa Socio</button></div>
+      <div class="membership-card reveal">
+        <div class="price-tag" id="membershipCardTag">Tessera Annuale</div>
+        <div class="price" id="membershipCardPrice">€10 <small>/anno</small></div>
+        <div class="price-note" id="membershipCardNote">Valida 12 mesi dalla data di iscrizione</div>
+        <button class="btn-gold" id="membershipCardBtn" onclick="handleMembershipAction()">Diventa Socio</button>
+      </div>
     </div>
   </section>
+
+  <!-- MEMBERSHIP MODAL -->
+  <div class="modal-overlay" id="membershipModal">
+    <div class="modal" style="max-width:480px">
+      <button class="modal-close" onclick="closeMembershipModal()">&times;</button>
+      <div class="modal-header">
+        <div class="modal-event-tag" id="memModalTag">Tesseramento</div>
+        <div class="modal-event-title" id="memModalTitle">Diventa socio Ebbe Resi</div>
+        <div class="modal-event-info" id="memModalDesc">Compila i dati per completare il tesseramento.</div>
+      </div>
+      <div class="modal-body">
+        <!-- Membership form -->
+        <div id="memStepForm">
+          <div class="form-group"><label class="form-label">Indirizzo di residenza *</label><input class="form-input" type="text" id="memIndirizzo" placeholder="Via Roma 42"><div class="form-error" id="errMemIndirizzo">Inserisci il tuo indirizzo</div></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Città *</label><input class="form-input" type="text" id="memCitta" placeholder="Torino"><div class="form-error" id="errMemCitta">Inserisci la città</div></div>
+            <div class="form-group"><label class="form-label">CAP *</label><input class="form-input" type="text" id="memCAP" placeholder="10100" maxlength="5"><div class="form-error" id="errMemCAP">Inserisci il CAP</div></div>
+          </div>
+          <div class="form-group"><label class="form-label">Codice Fiscale *</label><input class="form-input" type="text" id="memCF" placeholder="RSSMRA90A01H501Z" maxlength="16" style="text-transform:uppercase"><div class="form-error" id="errMemCF">Inserisci il codice fiscale</div></div>
+          <div style="padding:16px 20px;background:var(--bg);border-radius:var(--radius-sm);margin:20px 0">
+            <div style="display:flex;justify-content:space-between;font-size:.92rem;color:var(--ink)"><span>Tessera annuale</span><strong>€10,00</strong></div>
+            <div style="font-size:.78rem;color:var(--ink-muted);margin-top:6px" id="memValidityNote">Valida 12 mesi dalla data di iscrizione</div>
+          </div>
+          <!-- Payment method for standalone membership -->
+          <div class="payment-methods" style="margin-bottom:0">
+            <div class="payment-option" onclick="selectMemPayment('stripe')" data-mem-method="stripe"><div class="payment-radio"><div class="payment-radio-dot"></div></div><div class="payment-icon stripe">Stripe</div><div class="payment-info"><div class="payment-name">Carta di credito / debito</div></div></div>
+            <div class="payment-option" onclick="selectMemPayment('paypal')" data-mem-method="paypal"><div class="payment-radio"><div class="payment-radio-dot"></div></div><div class="payment-icon paypal">PayPal</div><div class="payment-info"><div class="payment-name">PayPal</div></div></div>
+            <div class="payment-option" onclick="selectMemPayment('satispay')" data-mem-method="satispay"><div class="payment-radio"><div class="payment-radio-dot"></div></div><div class="payment-icon satispay">Satispay</div><div class="payment-info"><div class="payment-name">Satispay</div></div></div>
+          </div>
+          <div class="modal-actions"><button class="modal-btn modal-btn-pay" id="btnMemPay" disabled onclick="processMembershipPayment()">Scegli un metodo</button></div>
+        </div>
+        <!-- Confirmation -->
+        <div id="memStepDone" style="display:none">
+          <div class="step-confirm">
+            <div class="confirm-icon">&#10003;</div>
+            <div class="confirm-title" id="memConfirmTitle">Benvenuto nel club!</div>
+            <p class="confirm-sub" id="memConfirmSub">La tua tessera socio è attiva. Da ora hai il 15% di sconto su un biglietto per ogni evento.</p>
+          </div>
+          <div class="modal-actions" style="justify-content:center"><button class="modal-btn modal-btn-close-final" onclick="closeMembershipModal()">Chiudi</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- BLOG — loaded dynamically from Firebase -->
   <section class="blog" id="blog">

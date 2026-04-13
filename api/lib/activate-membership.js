@@ -1,5 +1,5 @@
 // Shared utility — /api/lib/activate-membership.js
-// Called after payment is confirmed to activate new memberships
+// Called after payment is confirmed to activate new memberships or renewals
 
 import admin from 'firebase-admin';
 
@@ -9,8 +9,21 @@ export async function activateMembershipIfNeeded(db, bookingId) {
 
   const booking = bookingDoc.data();
 
-  // Only process if this is a new member signup and hasn't been activated yet
+  // Only process if this is a new member signup/renewal and hasn't been activated yet
   if (!booking.isNewMember || booking.membershipActivated) return;
+
+  // Calculate expiry date
+  let expiresAt;
+  if (booking.isRenewal && booking.renewFromDate) {
+    // Renewal: 1 year from the OLD expiry date, not from now
+    const oldExpiry = new Date(booking.renewFromDate);
+    // If old expiry is in the past, start from now instead
+    const startDate = oldExpiry > new Date() ? oldExpiry : new Date();
+    expiresAt = new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+  } else {
+    // New membership: 1 year from now
+    expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+  }
 
   const memberData = {
     email: booking.email,
@@ -23,17 +36,18 @@ export async function activateMembershipIfNeeded(db, bookingId) {
     codiceFiscale: booking.membershipData?.codiceFiscale || '',
     active: true,
     activatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-    bookingId: bookingId, // reference to the booking that triggered the signup
+    expiresAt,
+    bookingId: bookingId,
   };
 
-  // Create member document using email as ID for easy lookups
-  await db.collection('members').doc(booking.email).set(memberData);
+  // Create or update member document using email as ID
+  await db.collection('members').doc(booking.email).set(memberData, { merge: true });
 
   // Mark booking as membership activated (prevent double activation)
   await db.collection('bookings').doc(bookingId).update({
     membershipActivated: true,
   });
 
-  console.log(`Membership activated for ${booking.email} via booking ${bookingId}`);
+  const action = booking.isRenewal ? 'renewed' : 'activated';
+  console.log(`Membership ${action} for ${booking.email} via booking ${bookingId}, expires ${expiresAt.toISOString()}`);
 }
