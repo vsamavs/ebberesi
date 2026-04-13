@@ -173,7 +173,7 @@ export function isProfileComplete(profile) {
 // MEMBERS
 // ============================================================
 
-/** Check if a user is a member (has active membership) */
+/** Check if a user is a member and get membership details */
 export async function checkMembership(email) {
   const q = query(
     collection(db, 'members'),
@@ -182,6 +182,34 @@ export async function checkMembership(email) {
   );
   const snap = await getDocs(q);
   return !snap.empty;
+}
+
+/** Get full membership info including expiry date */
+export async function getMembershipInfo(email) {
+  const docSnap = await getDoc(doc(db, 'members', email));
+  if (!docSnap.exists()) return null;
+  const data = docSnap.data();
+  const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : (data.expiresAt ? new Date(data.expiresAt) : null);
+  const now = new Date();
+  const daysUntilExpiry = expiresAt ? Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24)) : null;
+  return {
+    ...data,
+    expiresAt,
+    daysUntilExpiry,
+    isExpiring: daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0,
+    isExpired: daysUntilExpiry !== null && daysUntilExpiry <= 0,
+  };
+}
+
+/** Create a standalone membership booking (not tied to an event) */
+export async function createMembershipBooking(data) {
+  const ref = await addDoc(collection(db, 'bookings'), {
+    ...data,
+    type: 'membership',
+    status: 'pending',
+    createdAt: Timestamp.now(),
+  });
+  return ref.id;
 }
 
 // ============================================================
