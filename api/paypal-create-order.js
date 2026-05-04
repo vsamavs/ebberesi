@@ -60,7 +60,7 @@ export default async function handler(req, res) {
         purchase_units: [
           {
             reference_id: bookingId,
-            description: `${qty} bigliett${qty > 1 ? 'i' : 'o'} ${eventTitle} — Ebbe Resi`,
+            description: `${qty} bigliett${qty > 1 ? 'i' : 'o'} ${eventTitle} — Ebbere Si,
             amount: {
               currency_code: 'EUR',
               value: (amount / 100).toFixed(2), // convert cents to EUR
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
           },
         ],
         application_context: {
-          brand_name: 'Ebbe Resi',
+          brand_name: 'Ebbere Si',
           landing_page: 'NO_PREFERENCE',
           user_action: 'PAY_NOW',
           return_url: `${req.headers.origin}/?payment=success&booking=${bookingId}&method=paypal`,

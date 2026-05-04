@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ebbe Resi — Associazione Culturale di Degustazione</title>
+  <title>Ebbere Si — Associazione Culturale di Degustazione</title>
   <meta name="description" content="Associazione culturale di degustazione vino a Torino. Serate, eventi, incontri con produttori.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
@@ -162,7 +162,7 @@
             <div class="auth-user-info">
               <div class="auth-user-name" id="authUserName" style="font-family:var(--serif);font-size:1.15rem;font-weight:500;color:var(--ink)"></div>
               <div class="auth-user-email" id="authUserEmail"></div>
-              <div class="auth-member-badge" id="authMemberBadge" style="display:none">Socio Ebbe Resi</div>
+              <div class="auth-member-badge" id="authMemberBadge" style="display:none">Socio Ebbere Si</div>
             </div>
           </div>
           <div class="auth-menu">
@@ -225,7 +225,7 @@
         <!-- STEP 1 -->
         <div class="step-panel active" data-panel="1">
           <div class="ticket-row"><div><div class="ticket-type-label">Biglietto Intero</div><div class="ticket-type-price" id="ticketPriceLabel"></div></div><div class="qty-control"><button class="qty-btn" onclick="changeQty(-1)" id="qtyMinus" disabled>&minus;</button><span class="qty-num" id="qtyNum">0</span><button class="qty-btn" onclick="changeQty(1)" id="qtyPlus">&plus;</button></div></div>
-          <div class="member-toggle" id="memberToggle" onclick="toggleMember()"><div class="toggle-switch" id="memberSwitch"></div><div class="member-toggle-text"><strong>Sono socio Ebbe Resi</strong><small id="memberToggleDesc">Sconto del 15% su un biglietto</small></div></div>
+          <div class="member-toggle" id="memberToggle" onclick="toggleMember()"><div class="toggle-switch" id="memberSwitch"></div><div class="member-toggle-text"><strong>Sono socio Ebbere Si</strong><small id="memberToggleDesc">Sconto del 15% su un biglietto</small></div></div>
           <div class="order-summary" id="orderSummary" style="display:none">
             <div class="order-line"><span id="summaryQtyLabel"></span><span id="summarySubtotal"></span></div>
             <div class="order-line discount" id="summaryDiscountRow" style="display:none"><span>Sconto socio (&minus;15% su 1 biglietto)</span><span id="summaryDiscount"></span></div>
@@ -246,7 +246,7 @@
         <!-- STEP 2B: Membership signup (shown only for non-members who toggled socio) -->
         <div class="step-panel" data-panel="2b">
           <div style="padding:16px 20px;background:var(--gold-soft);border-radius:var(--radius-sm);margin-bottom:20px">
-            <strong style="color:var(--ink);font-size:.92rem">Diventa socio Ebbe Resi</strong>
+            <strong style="color:var(--ink);font-size:.92rem">Diventa socio Ebbere Si</strong>
             <p style="font-size:.82rem;color:var(--ink-soft);margin-top:4px;line-height:1.5">Completa i dati per il tesseramento. Il costo della tessera (€10,00) sarà incluso nel totale del pagamento.</p>
           </div>
           <div class="form-group"><label class="form-label">Indirizzo di residenza *</label><input class="form-input" type="text" id="fieldIndirizzo" placeholder="Via Roma 42"><div class="form-error" id="errIndirizzo">Inserisci il tuo indirizzo</div></div>
@@ -300,7 +300,7 @@
       <div class="about-content reveal">
         <div class="section-tag">Chi Siamo</div>
         <h2 class="section-title">Cultura del vino, <em>passione</em> condivisa</h2>
-        <p>Ebbe Resi è un'associazione culturale nata dalla passione per il vino e per la condivisione. Organizziamo serate di degustazione, incontri con produttori e percorsi formativi per tutti — dal curioso al sommelier.</p>
+        <p>Ebbere Si è un'associazione culturale nata dalla passione per il vino e per la condivisione. Organizziamo serate di degustazione, incontri con produttori e percorsi formativi per tutti — dal curioso al sommelier.</p>
         <p>Il nostro obiettivo è rendere la cultura enologica accessibile, conviviale e memorabile. Ogni evento è un'occasione per imparare, scoprire e stare insieme.</p>
         <div class="stats"><div><div class="stat-num">120+</div><div class="stat-label">Eventi organizzati</div></div><div><div class="stat-num">800+</div><div class="stat-label">Partecipanti</div></div><div><div class="stat-num">50+</div><div class="stat-label">Produttori coinvolti</div></div></div>
       </div>
@@ -312,7 +312,7 @@
     <div class="reveal"><div class="section-tag">Diventa Socio</div><h2 class="section-title">Entra nel <em>club</em></h2></div>
     <div class="membership-content">
       <div class="membership-text reveal">
-        <p>Diventando socio Ebbe Resi accedi a un mondo di vantaggi esclusivi.</p>
+        <p>Diventando socio Ebbere Si accedi a un mondo di vantaggi esclusivi.</p>
         <ul class="membership-perks">
           <li><div class="perk-icon">%</div><div><strong>15% di sconto</strong> su un biglietto per ogni evento</div></li>
           <li><div class="perk-icon">&#9733;</div><div><strong>Accesso prioritario</strong> alla prenotazione degli eventi</div></li>
@@ -335,7 +335,7 @@
       <button class="modal-close" onclick="closeMembershipModal()">&times;</button>
       <div class="modal-header">
         <div class="modal-event-tag" id="memModalTag">Tesseramento</div>
-        <div class="modal-event-title" id="memModalTitle">Diventa socio Ebbe Resi</div>
+        <div class="modal-event-title" id="memModalTitle">Diventa socio Ebbere Si</div>
         <div class="modal-event-info" id="memModalDesc">Compila i dati per completare il tesseramento.</div>
       </div>
       <div class="modal-body">
@@ -401,7 +401,7 @@
       <div><h4>Legale</h4><ul><li><a href="#">Privacy Policy</a></li><li><a href="#">Cookie Policy</a></li><li><a href="#">Termini e Condizioni</a></li><li><a href="#">Statuto</a></li></ul></div>
       <div><h4>Contatti</h4><ul><li><a href="mailto:info@ebberesi.it">info@ebberesi.it</a></li><li><a href="#">Instagram</a></li><li><a href="#">Facebook</a></li></ul></div>
     </div>
-    <div class="footer-bottom"><span>&copy; 2026 Ebbe Resi — Associazione Culturale</span><div class="footer-payments"><span class="payment-badge">Stripe</span><span class="payment-badge">PayPal</span><span class="payment-badge">Satispay</span></div></div>
+    <div class="footer-bottom"><span>&copy; 2026 Ebbere Si — Associazione Culturale</span><div class="footer-payments"><span class="payment-badge">Stripe</span><span class="payment-badge">PayPal</span><span class="payment-badge">Satispay</span></div></div>
   </footer>
 
   <script type="module" src="./main.js"></script>

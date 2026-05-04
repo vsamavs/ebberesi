@@ -976,7 +976,7 @@ function openMembershipModal() {
   const isRenewal = membershipInfo && (membershipInfo.isExpiring || membershipInfo.isExpired);
 
   document.getElementById('memModalTag').textContent = isRenewal ? 'Rinnovo' : 'Tesseramento';
-  document.getElementById('memModalTitle').textContent = isRenewal ? 'Rinnova la tua tessera' : 'Diventa socio Ebbe Resi';
+  document.getElementById('memModalTitle').textContent = isRenewal ? 'Rinnova la tua tessera' : 'Diventa socio Ebbere Si';
   document.getElementById('memModalDesc').textContent = isRenewal
     ? 'Rinnova la tessera per continuare a usufruire dei vantaggi socio.'
     : 'Compila i dati per completare il tesseramento.';
@@ -1098,7 +1098,7 @@ window.processMembershipPayment = async function () {
       const res = await fetch('/api/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbe Resi', qty: 1, email: currentUser.email }),
+        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbere Si', qty: 1, email: currentUser.email }),
       });
       const data = await res.json();
       payUrl = data.url;
@@ -1106,7 +1106,7 @@ window.processMembershipPayment = async function () {
       const res = await fetch('/api/paypal-create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbe Resi', qty: 1 }),
+        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbere Si', qty: 1 }),
       });
       const data = await res.json();
       payUrl = data.url;
@@ -1114,7 +1114,7 @@ window.processMembershipPayment = async function () {
       const res = await fetch('/api/satispay-create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbe Resi' }),
+        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbere Si' }),
       });
       const data = await res.json();
       payUrl = data.redirectUrl;

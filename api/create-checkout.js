@@ -36,7 +36,7 @@ export default async function handler(req, res) {
             currency: 'eur',
             product_data: {
               name: eventTitle,
-              description: `${qty} bigliett${qty > 1 ? 'i' : 'o'} — Ebbe Resi`,
+              description: `${qty} bigliett${qty > 1 ? 'i' : 'o'} — Ebbere Si,
             },
             unit_amount: amount,
           },

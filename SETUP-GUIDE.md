@@ -1,4 +1,4 @@
-# 🍷 Ebbe Resi — Guida Setup Completa
+# 🍷 Ebbere Si — Guida Setup Completa
 
 ## Architettura
 

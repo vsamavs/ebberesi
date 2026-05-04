@@ -57,14 +57,14 @@ export default async function handler(req, res) {
 
     // Send email
     await transporter.sendMail({
-      from: `"Ebbe Resi" <${process.env.GMAIL_USER}>`,
+      from: `"Ebbere Si" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: 'Il tuo codice di accesso — Ebbe Resi',
+      subject: 'Il tuo codice di accesso — Ebbere Si',
       html: `
         <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 24px;">
           <div style="text-align: center; margin-bottom: 32px;">
             <h1 style="font-family: Georgia, serif; font-size: 24px; font-weight: 400; color: #1A1715; margin: 0;">
-              ebbe<span style="color: #8B2635;">resi</span>
+              Ebbere<span style="color: #8B2635;"> Si</span>
             </h1>
           </div>
           <p style="font-size: 15px; color: #5C5651; line-height: 1.6; margin-bottom: 24px;">
@@ -81,7 +81,7 @@ export default async function handler(req, res) {
           </p>
           <hr style="border: none; border-top: 1px solid rgba(26,23,21,0.08); margin: 32px 0 16px;">
           <p style="font-size: 12px; color: #9B938B; text-align: center;">
-            Ebbe Resi — Associazione Culturale di Degustazione
+            Ebbere Si — Associazione Culturale
           </p>
         </div>
       `,

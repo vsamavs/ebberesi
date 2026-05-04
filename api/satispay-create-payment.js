@@ -70,7 +70,7 @@ export default async function handler(req, res) {
       flow: 'MATCH_CODE',
       amount_unit: amount, // in cents
       currency: 'EUR',
-      description: `${eventTitle} — Ebbe Resi`,
+      description: `${eventTitle} — Ebbere Si,
       external_code: bookingId,
       callback_url: `${req.headers.origin}/api/satispay-callback`,
       redirect_url: `${req.headers.origin}/?payment=success&booking=${bookingId}&method=satispay`,
