@@ -71,3 +71,26 @@ body {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
 .reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ========== MEMBERSHIP ========== */
+.membership-copy { display: grid; gap: .9rem; }
+.membership-copy p { margin: 0; line-height: 1.6; opacity: .92; }
+
+.membership-copy .lead {
+  font-size: 1.05rem;
+  opacity: 1;
+}
+
+.membership-copy .closing {
+  margin-top: .2rem;
+}
+
+.membership-copy .taste-quote {
+  margin: .2rem 0;
+  padding: .9rem 1rem;
+  border-left: 4px solid rgba(212, 175, 55, .9); /* “gold” */
+  background: rgba(255, 255, 255, .04);
+  border-radius: 14px;
+  font-style: italic;
+}
+.membership-copy .taste-quote span { font-style: normal; opacity: .95; }

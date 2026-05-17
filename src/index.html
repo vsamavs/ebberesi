@@ -21,7 +21,7 @@
     .nav-toggle{display:none;background:none;border:none;cursor:pointer;padding:8px}.nav-toggle span{display:block;width:22px;height:1.5px;background:var(--ink);margin:5px 0;transition:all .3s}.nav-toggle.active span:nth-child(1){transform:rotate(45deg) translate(4px,4px)}.nav-toggle.active span:nth-child(2){opacity:0}.nav-toggle.active span:nth-child(3){transform:rotate(-45deg) translate(4px,-4px)}
 
     /* HERO */
-    .hero{min-height:100vh;display:flex;align-items:center;padding:120px 48px 80px;position:relative;overflow:hidden}.hero::before{content:'';position:absolute;top:-20%;right:-10%;width:600px;height:600px;background:radial-gradient(circle,var(--gold-soft) 0%,transparent 70%);pointer-events:none}.hero::after{content:'';position:absolute;bottom:-10%;left:-5%;width:400px;height:400px;background:linear-gradient(to bottom, var(--bg) 0%, var(--white) 100%);pointer-events:none}.hero-content{max-width:800px;position:relative;z-index:1}.hero-tag{display:inline-flex;align-items:center;gap:10px;font-size:.78rem;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:32px;opacity:0;animation:fadeUp .8s ease .2s forwards}.hero-tag::before{content:'';width:32px;height:1.5px;background:var(--accent)}.hero h1{font-family:var(--serif);font-weight:300;font-size:clamp(3rem,7vw,5.5rem);line-height:1.08;letter-spacing:-.02em;color:var(--ink);opacity:0;animation:fadeUp .8s ease .4s forwards}.hero h1 em{font-style:italic;font-weight:300;color:var(--accent)}.hero-sub{margin-top:28px;font-size:1.1rem;line-height:1.8;color:var(--ink-soft);max-width:520px;opacity:0;animation:fadeUp .8s ease .6s forwards}.hero-actions{margin-top:44px;display:flex;gap:16px;flex-wrap:wrap;opacity:0;animation:fadeUp .8s ease .8s forwards}
+    .hero{min-height:100vh;display:flex;align-items:center;padding:120px 48px 80px;position:relative;overflow:hidden}.hero::before{content:'';position:absolute;top:-20%;right:-10%;width:600px;height:600px;background:radial-gradient(circle,var(--gold-soft) 0%,transparent 70%);pointer-events:none}.hero::after{display: none;}.hero-content{max-width:800px;position:relative;z-index:1}.hero-tag{display:inline-flex;align-items:center;gap:10px;font-size:.78rem;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:32px;opacity:0;animation:fadeUp .8s ease .2s forwards}.hero-tag::before{content:'';width:32px;height:1.5px;background:var(--accent)}.hero h1{font-family:var(--serif);font-weight:300;font-size:clamp(3rem,7vw,5.5rem);line-height:1.08;letter-spacing:-.02em;color:var(--ink);opacity:0;animation:fadeUp .8s ease .4s forwards}.hero h1 em{font-style:italic;font-weight:300;color:var(--accent)}.hero-sub{margin-top:28px;font-size:1.1rem;line-height:1.8;color:var(--ink-soft);max-width:520px;opacity:0;animation:fadeUp .8s ease .6s forwards}.hero-actions{margin-top:44px;display:flex;gap:16px;flex-wrap:wrap;opacity:0;animation:fadeUp .8s ease .8s forwards}
     .btn-primary{display:inline-flex;align-items:center;gap:10px;padding:16px 36px;background:var(--accent);color:var(--white);border:none;border-radius:100px;font-family:var(--sans);font-size:.85rem;font-weight:400;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:all .3s}.btn-primary:hover{background:var(--accent-light);transform:translateY(-2px);box-shadow:var(--shadow-md)}.btn-primary svg{width:16px;height:16px}
     .btn-secondary{display:inline-flex;align-items:center;gap:10px;padding:16px 36px;background:transparent;color:var(--ink);border:1.5px solid var(--border);border-radius:100px;font-family:var(--sans);font-size:.85rem;font-weight:400;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:all .3s}.btn-secondary:hover{border-color:var(--ink);transform:translateY(-2px)}
     .hero-visual{position:absolute;right:100px;top:50%;transform:translateY(-50%);width:320px;height:420px;display:flex;align-items:center;z-index:1}
@@ -321,22 +321,38 @@
 
   <!-- MEMBERSHIP -->
   <section class="membership" id="soci">
-    <div class="reveal"><div class="section-tag">Diventa Socio</div><h2 class="section-title">Entra nel <em>club</em></h2></div>
+    <div class="reveal"><div class="section-tag">Diventa Socio</div><h2 class="section-title">Entra a far parte di <em>Ebbere Si</em></h2></div>
     <div class="membership-content">
       <div class="membership-text reveal">
-        <p>Diventando socio Ebbere Si accedi a un mondo di vantaggi esclusivi.</p>
-        <ul class="membership-perks">
-          <li><div class="perk-icon">%</div><div><strong>15% di sconto</strong> su un biglietto per ogni evento</div></li>
-          <li><div class="perk-icon">&#9733;</div><div><strong>Accesso prioritario</strong> alla prenotazione degli eventi</div></li>
-          <li><div class="perk-icon">&#127873;</div><div><strong>Eventi esclusivi</strong> riservati ai soci</div></li>
-          <li><div class="perk-icon">&#128231;</div><div><strong>Newsletter dedicata</strong> con contenuti premium</div></li>
-        </ul>
+        <div class="membership-copy">
+          <p class="lead">
+            Speriamo che il tempo trascorso insieme sia stato ricco di momenti piacevoli.
+            L’arte del buon bere è ciò che ci unisce, ed è questa passione a rendere <strong>Ebbere Si</strong> speciale.
+          </p>
+
+          <p>
+            Il tuo contributo è fondamentale per continuare a crescere e organizzare eventi sempre più curati e coinvolgenti.
+          </p>
+
+          <blockquote class="taste-quote" aria-label="Messaggio ispirazionale">
+            Diventare socio di Ebbere Si è come stappare una bottiglia pregiata:
+            <span>ogni volta un’esperienza fatta di scoperta, convivialità e condivisione.</span>
+          </blockquote>
+
+          <p class="closing">
+            Grazie per essere parte della nostra storia… <strong>non vediamo l’ora di brindare ancora insieme.</strong>
+          </p>
+        </div>
       </div>
       <div class="membership-card reveal">
         <div class="price-tag" id="membershipCardTag">Tessera Annuale</div>
         <div class="price" id="membershipCardPrice">€10 <small>/anno</small></div>
         <div class="price-note" id="membershipCardNote">Valida 12 mesi dalla data di iscrizione</div>
         <button class="btn-gold" id="membershipCardBtn" onclick="handleMembershipAction()">Diventa Socio</button>
+        <ul class="membership-perks">
+          <li><div class="perk-icon">%</div><div><strong>15% di sconto</strong> su un biglietto per ogni evento</div></li>
+          <!-- <li><div class="perk-icon">&#9733;</div><div><strong>Sconti</strong> alla prenotazione degli eventi</div></li> -->
+        </ul>        
       </div>
     </div>
   </section>

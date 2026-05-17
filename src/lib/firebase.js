@@ -12,6 +12,11 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+
+console.log("projectId:", import.meta.env.VITE_FIREBASE_PROJECT_ID);
+console.log("mode:", import.meta.env.MODE);
+
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
