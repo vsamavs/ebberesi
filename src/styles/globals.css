@@ -94,3 +94,32 @@ body {
   font-style: italic;
 }
 .membership-copy .taste-quote span { font-style: normal; opacity: .95; }
+
+.footer-social{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.social-icon{
+  width: 40px;          /* più grandi */
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f2f2f2;  /* sfondo chiaro */
+  color: #000;          /* 👈 icone nere */
+  text-decoration: none;
+  transition: transform .15s ease, background .15s ease;
+}
+
+.social-icon svg{
+  width: 22px;          /* icona più visibile */
+  height: 22px;
+}
+
+.social-icon:hover{
+  transform: translateY(-2px);
+  background: #e0e0e0;
+}
