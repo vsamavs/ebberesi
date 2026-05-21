@@ -60,7 +60,7 @@ export default async function handler(req, res) {
         purchase_units: [
           {
             reference_id: bookingId,
-            description: `${qty} bigliett${qty > 1 ? 'i' : 'o'} ${eventTitle} — Ebbere Si,
+            description: `${qty} bigliett${qty > 1 ? 'i' : 'o'} ${eventTitle} — Ebbere Si`,
             amount: {
               currency_code: 'EUR',
               value: (amount / 100).toFixed(2), // convert cents to EUR
