@@ -877,7 +877,7 @@ window.handleSaveProfile = async function () {
   const fields = [
     { id: 'profileNome', err: 'errProfileNome', test: v => v.trim().length >= 2 },
     { id: 'profileCognome', err: 'errProfileCognome', test: v => v.trim().length >= 2 },
-    { id: 'profileTelefono', err: 'errProfileTelefono', test: v => v.replace(/\s/g, '').length >= 8 },
+    // { id: 'profileTelefono', err: 'errProfileTelefono', test: v => v.replace(/\s/g, '').length >= 8 },
     { id: 'profileBirthDate', err: 'errProfileBirthDate', test: v => v.length > 0 },
   ];
   fields.forEach(f => {
@@ -891,7 +891,7 @@ window.handleSaveProfile = async function () {
     const profileData = {
       name: document.getElementById('profileNome').value.trim(),
       surname: document.getElementById('profileCognome').value.trim(),
-      phone: document.getElementById('profileTelefono').value.trim(),
+      // phone: document.getElementById('profileTelefono').value.trim(),
       birthDate: document.getElementById('profileBirthDate').value,
       email: currentUser.email,
       createdAt: userProfile?.createdAt || new Date().toISOString(),
