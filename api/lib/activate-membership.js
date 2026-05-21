@@ -2,6 +2,7 @@
 // Called after payment is confirmed to activate new memberships or renewals
 
 import admin from 'firebase-admin';
+import { sendMembershipConfirmation } from './send-confirmation-email.js';
 
 export async function activateMembershipIfNeeded(db, bookingId) {
   const bookingDoc = await db.collection('bookings').doc(bookingId).get();
@@ -47,6 +48,14 @@ export async function activateMembershipIfNeeded(db, bookingId) {
   await db.collection('bookings').doc(bookingId).update({
     membershipActivated: true,
   });
+
+  // Send confirmation email
+  try {
+    await sendMembershipConfirmation({ ...memberData, expiresAt }, booking.isRenewal || false);
+  } catch (emailErr) {
+    console.error('Failed to send membership email:', emailErr);
+    // Don't fail the whole process if email fails
+  }
 
   const action = booking.isRenewal ? 'renewed' : 'activated';
   console.log(`Membership ${action} for ${booking.email} via booking ${bookingId}, expires ${expiresAt.toISOString()}`);

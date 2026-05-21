@@ -1,7 +1,9 @@
 // Vercel Serverless Function — /api/paypal-capture-order.js
-// Captures a PayPal order after user approval
+// Captures a PayPal order after user approval and sends confirmation email
 
 import admin from 'firebase-admin';
+import { activateMembershipIfNeeded } from './lib/activate-membership.js';
+import { sendBookingConfirmation } from './lib/send-confirmation-email.js';
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -65,8 +67,33 @@ export default async function handler(req, res) {
         paidAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      // Activate membership if this booking includes a new member signup
-      const { activateMembershipIfNeeded } = await import('./lib/activate-membership.js');
+      // Get booking data for email
+      const bookingDoc = await db.collection('bookings').doc(bookingId).get();
+      const booking = bookingDoc.data();
+
+      // Send booking confirmation email
+      if (booking && booking.eventId) {
+        try {
+          const eventDoc = await db.collection('events').doc(booking.eventId).get();
+          const eventData = eventDoc.exists ? eventDoc.data() : {};
+          const eventDate = eventData.date?.toDate ? eventData.date.toDate() : null;
+          const months = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+          const dateFormatted = eventDate
+            ? `${eventDate.getDate()} ${months[eventDate.getMonth()]} ${eventDate.getFullYear()} — ${String(eventDate.getHours()).padStart(2,'0')}:${String(eventDate.getMinutes()).padStart(2,'0')}`
+            : '';
+
+          await sendBookingConfirmation({
+            ...booking,
+            bookingId,
+            eventDate: dateFormatted,
+            eventLocation: eventData.location || '',
+          });
+        } catch (emailErr) {
+          console.error('Failed to send booking email:', emailErr);
+        }
+      }
+
+      // Activate membership if needed
       await activateMembershipIfNeeded(db, bookingId);
 
       res.status(200).json({ success: true });

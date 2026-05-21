@@ -1,12 +1,10 @@
 // Vercel Serverless Function — /api/stripe-webhook.js
-// Handles Stripe webhook events to confirm payments
-//
-// Configure in Stripe Dashboard → Webhooks → Add endpoint:
-// URL: https://yourdomain.com/api/stripe-webhook
-// Events: checkout.session.completed
+// Handles Stripe webhook events to confirm payments and send emails
 
 import Stripe from 'stripe';
 import admin from 'firebase-admin';
+import { activateMembershipIfNeeded } from './lib/activate-membership.js';
+import { sendBookingConfirmation } from './lib/send-confirmation-email.js';
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -21,7 +19,6 @@ if (!admin.apps.length) {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const db = admin.firestore();
 
-// Disable body parsing — Stripe needs raw body for signature verification
 export const config = { api: { bodyParser: false } };
 
 async function getRawBody(req) {
@@ -49,8 +46,34 @@ export default async function handler(req, res) {
           paidAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
+        // Get booking data for email
+        const bookingDoc = await db.collection('bookings').doc(bookingId).get();
+        const booking = bookingDoc.data();
+
+        // Send booking confirmation email (only for event bookings, not standalone memberships)
+        if (booking && booking.eventId) {
+          try {
+            // Get event details for the email
+            const eventDoc = await db.collection('events').doc(booking.eventId).get();
+            const eventData = eventDoc.exists ? eventDoc.data() : {};
+            const eventDate = eventData.date?.toDate ? eventData.date.toDate() : null;
+            const months = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+            const dateFormatted = eventDate
+              ? `${eventDate.getDate()} ${months[eventDate.getMonth()]} ${eventDate.getFullYear()} — ${String(eventDate.getHours()).padStart(2,'0')}:${String(eventDate.getMinutes()).padStart(2,'0')}`
+              : '';
+
+            await sendBookingConfirmation({
+              ...booking,
+              bookingId,
+              eventDate: dateFormatted,
+              eventLocation: eventData.location || booking.eventLocation || '',
+            });
+          } catch (emailErr) {
+            console.error('Failed to send booking email:', emailErr);
+          }
+        }
+
         // Activate membership if this booking includes a new member signup
-        const { activateMembershipIfNeeded } = await import('./lib/activate-membership.js');
         await activateMembershipIfNeeded(db, bookingId);
 
         console.log(`Booking ${bookingId} confirmed via Stripe`);
