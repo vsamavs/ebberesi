@@ -114,7 +114,7 @@ export async function sendBookingConfirmation(booking) {
   `;
 
   await transporter.sendMail({
-    from: `"Ebbere Si" <${process.env.GMAIL_USER}>`,
+    from: `"Ebbere Si" <${process.env.GMAIL_USER_ALIAS}>`,
     to: booking.email,
     subject: `Prenotazione confermata — ${booking.eventTitle}`,
     html: emailWrapper(content),
@@ -180,7 +180,7 @@ export async function sendMembershipConfirmation(memberData, isRenewal = false) 
   `;
 
   await transporter.sendMail({
-    from: `"Ebbere Si" <${process.env.GMAIL_USER}>`,
+    from: `"Ebbere Si" <${process.env.GMAIL_USER_ALIAS}>`,
     to: memberData.email,
     subject: isRenewal ? 'Tessera rinnovata — Ebbere Si' : 'Benvenuto in Ebbere Si!',
     html: emailWrapper(content),

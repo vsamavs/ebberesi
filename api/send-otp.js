@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
     // Send email
     await transporter.sendMail({
-      from: `"Ebbere Si" <${process.env.GMAIL_USER}>`,
+      from: `"Ebbere Si" <${process.env.GMAIL_USER_ALIAS}>`,
       to: email,
       subject: 'Il tuo codice di accesso — Ebbere Si',
       html: `
