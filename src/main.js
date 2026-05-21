@@ -728,6 +728,20 @@ function getInitials(email) {
 
 function showProfileCompletion() {
   hideAllAuthSteps();
+  
+  // Pre-fill fields with existing data from Firestore
+  if (userProfile) {
+    if (userProfile.name) document.getElementById('profileNome').value = userProfile.name;
+    if (userProfile.surname) document.getElementById('profileCognome').value = userProfile.surname;
+    if (userProfile.phone) document.getElementById('profileTelefono').value = userProfile.phone;
+    if (userProfile.birthDate) document.getElementById('profileBirthDate').value = userProfile.birthDate;
+  }
+  // Also pre-fill email from auth if available
+  if (currentUser && currentUser.email) {
+    const emailField = document.getElementById('profileEmail');
+    if (emailField) emailField.value = currentUser.email;
+  }
+
   document.getElementById('authStepProfile').style.display = 'block';
   document.getElementById('authModalTitle').textContent = 'Completa il profilo';
   document.getElementById('authModalDesc').textContent = 'Ancora un ultimo passaggio per completare la registrazione.';
