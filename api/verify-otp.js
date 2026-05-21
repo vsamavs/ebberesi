@@ -109,7 +109,7 @@ export default async function handler(req, res) {
         await db.collection('users').doc(importedDocId).delete();
 
         // Re-check profile completeness
-        hasProfile = importedData.name && importedData.surname && importedData.phone && importedData.birthDate;
+        hasProfile = importedData.name && importedData.surname && importedData.birthDate;
       }
     }
 

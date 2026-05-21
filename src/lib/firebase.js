@@ -171,7 +171,7 @@ export async function saveUserProfile(uid, profileData) {
 
 /** Check if user profile is complete (has required fields) */
 export function isProfileComplete(profile) {
-  return profile && profile.name && profile.surname && profile.phone && profile.birthDate;
+  return profile && profile.name && profile.surname && profile.birthDate;
 }
 
 // ============================================================
