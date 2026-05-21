@@ -1,4 +1,4 @@
-import { getEvents, createBooking, subscribeNewsletter, formatDate, getBlogPosts, sendOTP, verifyOTP, onAuth, logout, checkMembership, getMembershipInfo, createMembershipBooking, getUserProfile, saveUserProfile, isProfileComplete } from './lib/firebase.js';
+import { getEvents, createBooking, subscribeNewsletter, formatDate, getBlogPosts, sendOTP, verifyOTP, onAuth, logout, checkMembership, getMembershipInfo, createMembershipBooking, getUserProfile, saveUserProfile, isProfileComplete, verifyDiscountCode } from './lib/firebase.js';
 import './styles/globals.css';
 
 // ===================================================================
@@ -12,6 +12,7 @@ let currentUser = null;
 let isVerifiedMember = false;
 let needsMemberSignup = false;
 let membershipInfo = null;
+let discountCode = null;
 
 // ===================================================================
 // INIT
@@ -223,6 +224,16 @@ window.openBooking = function (eventId) {
   qty = 0; selectedPayment = null; currentStep = 1;
   needsMemberSignup = false;
 
+  discountCode = null;
+  const codeInput = document.getElementById('discountCodeInput');
+  if (codeInput) { codeInput.value = ''; codeInput.disabled = false; codeInput.classList.remove('error'); }
+  const codeErr = document.getElementById('discountCodeErr');
+  if (codeErr) codeErr.classList.remove('show');
+  const codeSuccess = document.getElementById('discountCodeSuccess');
+  if (codeSuccess) codeSuccess.style.display = 'none';
+  const codeBtn = document.getElementById('btnApplyCode');
+  if (codeBtn) codeBtn.style.display = '';
+
   // If logged in and verified member, auto-enable and lock toggle
   if (currentUser && isVerifiedMember) {
     isMember = true;
@@ -373,16 +384,38 @@ function updateQtyUI() {
   if (qty > 0 && currentEvent) {
     s.style.display = 'block';
     const sub = qty * currentEvent.price;
-    // 15% discount on ONE ticket only
-    const disc = isMember ? currentEvent.price * 0.15 : 0;
+    // 15% member discount on ONE ticket only
+    const memberDisc = isMember ? currentEvent.price * 0.15 : 0;
+    // Discount code on ONE ticket only
+    const codeDisc = discountCode ? currentEvent.price * (discountCode.percentage / 100) : 0;
     // Membership fee if toggling socio but not yet a member
     const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
-    const total = sub - disc + memberFee;
+    const total = sub - memberDisc - codeDisc + memberFee;
 
     document.getElementById('summaryQtyLabel').textContent = `${qty}\u00D7 Biglietto`;
     document.getElementById('summarySubtotal').textContent = fmt(sub);
     document.getElementById('summaryDiscountRow').style.display = isMember ? 'flex' : 'none';
-    document.getElementById('summaryDiscount').textContent = '\u2212' + fmt(disc);
+    document.getElementById('summaryDiscount').textContent = '\u2212' + fmt(memberDisc);
+
+    // Discount code row
+    let codeRow = document.getElementById('summaryCodeDiscountRow');
+    if (!codeRow) {
+      // Create the row dynamically if it doesn't exist
+      const memberFeeRow = document.getElementById('summaryMemberFeeRow');
+      codeRow = document.createElement('div');
+      codeRow.className = 'order-line discount';
+      codeRow.id = 'summaryCodeDiscountRow';
+      codeRow.innerHTML = '<span id="summaryCodeLabel"></span><span id="summaryCodeDiscount"></span>';
+      memberFeeRow.parentNode.insertBefore(codeRow, memberFeeRow);
+    }
+    if (discountCode) {
+      codeRow.style.display = 'flex';
+      document.getElementById('summaryCodeLabel').textContent = `Codice ${discountCode.code} (\u2212${discountCode.percentage}% su 1 biglietto)`;
+      document.getElementById('summaryCodeDiscount').textContent = '\u2212' + fmt(codeDisc);
+    } else {
+      codeRow.style.display = 'none';
+    }
+
     document.getElementById('summaryMemberFeeRow').style.display = (isMember && !isVerifiedMember) ? 'flex' : 'none';
     document.getElementById('summaryTotal').textContent = fmt(total);
   } else {
@@ -405,6 +438,67 @@ window.toggleMember = function () {
   isMember = !isMember;
   needsMemberSignup = isMember && !isVerifiedMember;
   document.getElementById('memberSwitch').classList.toggle('on', isMember);
+  updateQtyUI();
+};
+
+// ===================================================================
+// DISCOUNT CODE
+// ===================================================================
+window.applyDiscountCode = async function () {
+  const input = document.getElementById('discountCodeInput');
+  const code = input.value.trim();
+  const errEl = document.getElementById('discountCodeErr');
+  const successEl = document.getElementById('discountCodeSuccess');
+
+  if (!code) {
+    input.classList.add('error');
+    errEl.textContent = 'Inserisci un codice';
+    errEl.classList.add('show');
+    return;
+  }
+
+  const btn = document.getElementById('btnApplyCode');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    const result = await verifyDiscountCode(code);
+    if (result) {
+      discountCode = result;
+      input.classList.remove('error');
+      errEl.classList.remove('show');
+      input.disabled = true;
+      btn.style.display = 'none';
+      successEl.style.display = 'flex';
+      document.getElementById('discountCodeMsg').textContent = `Codice "${result.code}" applicato: −${result.percentage}% su un biglietto`;
+      updateQtyUI();
+    } else {
+      discountCode = null;
+      input.classList.add('error');
+      errEl.textContent = 'Codice non valido o scaduto';
+      errEl.classList.add('show');
+      successEl.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('Discount code error:', err);
+    input.classList.add('error');
+    errEl.textContent = 'Errore nella verifica. Riprova.';
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Applica';
+  }
+};
+
+window.removeDiscountCode = function () {
+  discountCode = null;
+  const input = document.getElementById('discountCodeInput');
+  input.value = '';
+  input.disabled = false;
+  input.classList.remove('error');
+  document.getElementById('discountCodeErr').classList.remove('show');
+  document.getElementById('discountCodeSuccess').style.display = 'none';
+  document.getElementById('btnApplyCode').style.display = '';
   updateQtyUI();
 };
 
@@ -458,9 +552,10 @@ window.validateMembershipAndContinue = function () {
 function populateRecap() {
   if (!currentEvent) return;
   const sub = qty * currentEvent.price;
-  const disc = isMember ? currentEvent.price * 0.15 : 0;
+  const memberDisc = isMember ? currentEvent.price * 0.15 : 0;
+  const codeDisc = discountCode ? currentEvent.price * (discountCode.percentage / 100) : 0;
   const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
-  const total = sub - disc + memberFee;
+  const total = sub - memberDisc - codeDisc + memberFee;
   const d = formatDate(currentEvent.date);
 
   document.getElementById('recapEvent').textContent = currentEvent.title;
@@ -468,7 +563,27 @@ function populateRecap() {
   document.getElementById('recapQty').textContent = `${qty}\u00D7 Biglietto`;
   document.getElementById('recapSubtotal').textContent = fmt(sub);
   document.getElementById('recapDiscountRow').style.display = isMember ? 'flex' : 'none';
-  document.getElementById('recapDiscount').textContent = '\u2212' + fmt(disc);
+  document.getElementById('recapDiscount').textContent = '\u2212' + fmt(memberDisc);
+
+  // Code discount in recap
+  let recapCodeRow = document.getElementById('recapCodeDiscountRow');
+  if (!recapCodeRow) {
+    const recapMemberFeeRow = document.getElementById('recapMemberFeeRow');
+    recapCodeRow = document.createElement('div');
+    recapCodeRow.className = 'payment-recap-row';
+    recapCodeRow.id = 'recapCodeDiscountRow';
+    recapCodeRow.style.color = '#2E7D32';
+    recapCodeRow.innerHTML = '<span id="recapCodeLabel"></span><span id="recapCodeDiscount"></span>';
+    recapMemberFeeRow.parentNode.insertBefore(recapCodeRow, recapMemberFeeRow);
+  }
+  if (discountCode) {
+    recapCodeRow.style.display = 'flex';
+    document.getElementById('recapCodeLabel').textContent = `Codice ${discountCode.code} (\u2212${discountCode.percentage}%)`;
+    document.getElementById('recapCodeDiscount').textContent = '\u2212' + fmt(codeDisc);
+  } else {
+    recapCodeRow.style.display = 'none';
+  }
+
   document.getElementById('recapMemberFeeRow').style.display = (isMember && !isVerifiedMember) ? 'flex' : 'none';
   document.getElementById('recapName').textContent =
     document.getElementById('fieldNome').value + ' ' + document.getElementById('fieldCognome').value;
@@ -496,8 +611,9 @@ window.processPayment = async function () {
 
   const sub = qty * currentEvent.price;
   const disc = isMember ? currentEvent.price * 0.15 : 0;
+  const codeDisc = discountCode ? currentEvent.price * (discountCode.percentage / 100) : 0;
   const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
-  const total = sub - disc + memberFee;
+  const total = sub - disc - codeDisc + memberFee;
   const amountCents = Math.round(total * 100);
   const email = document.getElementById('fieldEmail').value.trim();
 

@@ -272,6 +272,20 @@
         <div class="step-panel active" data-panel="1">
           <div class="ticket-row"><div><div class="ticket-type-label">Biglietto Intero</div><div class="ticket-type-price" id="ticketPriceLabel"></div></div><div class="qty-control"><button class="qty-btn" onclick="changeQty(-1)" id="qtyMinus" disabled>&minus;</button><span class="qty-num" id="qtyNum">0</span><button class="qty-btn" onclick="changeQty(1)" id="qtyPlus">&plus;</button></div></div>
           <div class="member-toggle" id="memberToggle" onclick="toggleMember()"><div class="toggle-switch" id="memberSwitch"></div><div class="member-toggle-text"><strong>Sono socio Ebbere Si</strong><small id="memberToggleDesc">Sconto del 15% su un biglietto</small></div></div>
+          <div class="discount-code-section" style="margin-bottom:20px">
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="flex:1">
+                <label class="form-label">Codice sconto</label>
+                <input class="form-input" type="text" id="discountCodeInput" placeholder="Es. WINE2026" style="text-transform:uppercase">
+                <div class="form-error" id="discountCodeErr">Codice non valido o scaduto</div>
+              </div>
+              <button class="btn-book" id="btnApplyCode" onclick="applyDiscountCode()" style="margin-top:24px;padding:12px 20px">Applica</button>
+            </div>
+            <div id="discountCodeSuccess" style="display:none;margin-top:8px;font-size:.82rem;color:#2E7D32;display:flex;align-items:center;gap:6px">
+              <span>✓</span> <span id="discountCodeMsg"></span>
+              <button onclick="removeDiscountCode()" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:.78rem;margin-left:auto">Rimuovi</button>
+            </div>
+          </div>          
           <div class="order-summary" id="orderSummary" style="display:none">
             <div class="order-line"><span id="summaryQtyLabel"></span><span id="summarySubtotal"></span></div>
             <div class="order-line discount" id="summaryDiscountRow" style="display:none"><span>Sconto socio (&minus;15% su 1 biglietto)</span><span id="summaryDiscount"></span></div>

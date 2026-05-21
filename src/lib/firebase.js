@@ -234,4 +234,29 @@ export function formatDate(timestamp) {
   return { full: `${day} ${month} ${year} — ${hours}:${mins}`, day, month, year, time: `${hours}:${mins}` };
 }
 
+/** Verify a discount code and return its details */
+export async function verifyDiscountCode(code) {
+  const q = query(
+    collection(db, 'codici'),
+    where('codice', '==', code.toUpperCase()),
+    where('active', '==', true)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+
+  const data = snap.docs[0].data();
+
+  // Check expiry if present
+  if (data.expiresAt) {
+    const expiry = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+    if (new Date() > expiry) return null;
+  }
+
+  return {
+    id: snap.docs[0].id,
+    code: data.codice,
+    percentage: data.percentuale,
+  };
+}
+
 export { db, auth };
