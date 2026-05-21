@@ -83,9 +83,35 @@ export default async function handler(req, res) {
     // Create custom token for client sign-in
     const customToken = await admin.auth().createCustomToken(uid);
 
-    // Check if user has a profile
-    const profileDoc = await db.collection('users').doc(uid).get();
-    const hasProfile = profileDoc.exists && profileDoc.data()?.name && profileDoc.data()?.surname;
+// Check if user has a profile by UID
+    let profileDoc = await db.collection('users').doc(uid).get();
+    let hasProfile = profileDoc.exists && profileDoc.data()?.name && profileDoc.data()?.surname;
+
+    // If no profile by UID, search by email (for imported users)
+    if (!hasProfile) {
+      const emailQuery = await db.collection('users')
+        .where('email', '==', email)
+        .limit(1)
+        .get();
+
+      if (!emailQuery.empty) {
+        const importedData = emailQuery.docs[0].data();
+        const importedDocId = emailQuery.docs[0].id;
+
+        // Copy imported data to the UID-based document
+        await db.collection('users').doc(uid).set({
+          ...importedData,
+          email,
+          migratedFrom: importedDocId,
+        }, { merge: true });
+
+        // Delete the old imported document
+        await db.collection('users').doc(importedDocId).delete();
+
+        // Re-check profile completeness
+        hasProfile = importedData.name && importedData.surname && importedData.phone && importedData.birthDate;
+      }
+    }
 
     res.status(200).json({
       success: true,
