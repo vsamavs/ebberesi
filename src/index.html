@@ -273,13 +273,13 @@
           <div class="ticket-row"><div><div class="ticket-type-label">Biglietto Intero</div><div class="ticket-type-price" id="ticketPriceLabel"></div></div><div class="qty-control"><button class="qty-btn" onclick="changeQty(-1)" id="qtyMinus" disabled>&minus;</button><span class="qty-num" id="qtyNum">0</span><button class="qty-btn" onclick="changeQty(1)" id="qtyPlus">&plus;</button></div></div>
           <div class="member-toggle" id="memberToggle" onclick="toggleMember()"><div class="toggle-switch" id="memberSwitch"></div><div class="member-toggle-text"><strong>Sono socio Ebbere Si</strong><small id="memberToggleDesc">Sconto del 15% su un biglietto</small></div></div>
           <div class="discount-code-section" style="margin-bottom:20px">
-            <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="display:flex;gap:10px;align-items:flex-end">
               <div style="flex:1">
                 <label class="form-label">Codice sconto</label>
-                <input class="form-input" type="text" id="discountCodeInput" placeholder="Es. WINE2026" style="text-transform:uppercase">
+                <input class="form-input" type="text" id="discountCodeInput" placeholder="" style="text-transform:uppercase">
                 <div class="form-error" id="discountCodeErr">Codice non valido o scaduto</div>
               </div>
-              <button class="btn-book" id="btnApplyCode" onclick="applyDiscountCode()" style="margin-top:24px;padding:12px 20px">Applica</button>
+              <button class="btn-book" id="btnApplyCode" onclick="applyDiscountCode()" style="padding:12px 20px;margin-bottom:2px">Applica</button>
             </div>
             <div id="discountCodeSuccess" style="display:none;margin-top:8px;font-size:.82rem;color:#2E7D32;display:flex;align-items:center;gap:6px">
               <span>✓</span> <span id="discountCodeMsg"></span>
