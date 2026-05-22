@@ -64,10 +64,10 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { bookingId, amount, eventTitle } = req.body;
+    const { bookingId, amount, eventTitle, isMobile } = req.body;
 
     const paymentBody = JSON.stringify({
-      flow: 'MATCH_CODE',
+      flow: isMobile ? 'PRE_AUTHORIZED' : 'MATCH_CODE',
       amount_unit: amount, // in cents
       currency: 'EUR',
       description: `${eventTitle} — Ebbere Si`,

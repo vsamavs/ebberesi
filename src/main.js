@@ -13,6 +13,7 @@ let isVerifiedMember = false;
 let needsMemberSignup = false;
 let membershipInfo = null;
 let discountCode = null;
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 // ===================================================================
 // INIT
@@ -678,7 +679,7 @@ window.processPayment = async function () {
       const res = await fetch('/api/satispay-create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: currentEvent.title }),
+        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: currentEvent.title, isMobile }),
       });
       const data = await res.json();
       if (data.redirectUrl) { window.location.href = data.redirectUrl; return; }
@@ -1244,7 +1245,7 @@ window.processMembershipPayment = async function () {
       const res = await fetch('/api/satispay-create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbere Si' }),
+        body: JSON.stringify({ bookingId, amount: amountCents, eventTitle: isRenewal ? 'Rinnovo Tessera Socio' : 'Tessera Socio Ebbere Si', isMobile }),
       });
       const data = await res.json();
       payUrl = data.redirectUrl;
