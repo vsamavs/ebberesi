@@ -1,7 +1,9 @@
 // Vercel Serverless Function — /api/satispay-create-payment.js
 
 import admin from 'firebase-admin';
-import satispay from 'node-satispay';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const satispay = require('node-satispay');
 
 if (!admin.apps.length) {
   admin.initializeApp({

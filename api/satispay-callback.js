@@ -3,7 +3,9 @@
 import admin from 'firebase-admin';
 import { activateMembershipIfNeeded } from './lib/activate-membership.js';
 import { sendBookingConfirmation } from './lib/send-confirmation-email.js';
-import satispay from 'node-satispay';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const satispay = require('node-satispay');
 
 if (!admin.apps.length) {
   admin.initializeApp({
