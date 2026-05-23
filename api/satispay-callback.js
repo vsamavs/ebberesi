@@ -1,5 +1,4 @@
 // Vercel Serverless Function — /api/satispay-callback.js
-// Called by Satispay when payment status changes, sends confirmation email
 
 import admin from 'firebase-admin';
 import { activateMembershipIfNeeded } from './lib/activate-membership.js';
@@ -17,24 +16,35 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
+const satispay = require('node-satispay');
+satispay.config({
+  key_id: process.env.SATISPAY_KEY_ID,
+  private_key: process.env.SATISPAY_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  sandbox: process.env.SATISPAY_MODE !== 'live',
+});
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   try {
-    const { id, status, external_code } = req.body;
+    const { id } = req.body;
 
-    if (status === 'ACCEPTED' && external_code) {
-      await db.collection('bookings').doc(external_code).update({
+    // Verify payment status directly with Satispay API
+    const payment = await satispay.get_payment_details(id);
+
+    if (payment.status === 'ACCEPTED' && payment.external_code) {
+      const bookingId = payment.external_code;
+
+      await db.collection('bookings').doc(bookingId).update({
         status: 'paid',
         paymentId: id,
         paidAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      // Get booking data for email
-      const bookingDoc = await db.collection('bookings').doc(external_code).get();
+      // Send booking confirmation email
+      const bookingDoc = await db.collection('bookings').doc(bookingId).get();
       const booking = bookingDoc.data();
 
-      // Send booking confirmation email
       if (booking && booking.eventId) {
         try {
           const eventDoc = await db.collection('events').doc(booking.eventId).get();
@@ -47,7 +57,7 @@ export default async function handler(req, res) {
 
           await sendBookingConfirmation({
             ...booking,
-            bookingId: external_code,
+            bookingId,
             eventDate: dateFormatted,
             eventLocation: eventData.location || '',
           });
@@ -57,9 +67,9 @@ export default async function handler(req, res) {
       }
 
       // Activate membership if needed
-      await activateMembershipIfNeeded(db, external_code);
+      await activateMembershipIfNeeded(db, bookingId);
 
-      console.log(`Booking ${external_code} confirmed via Satispay`);
+      console.log(`Booking ${bookingId} confirmed via Satispay`);
     }
 
     res.status(200).json({ received: true });
