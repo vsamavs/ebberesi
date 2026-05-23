@@ -58,7 +58,7 @@ export default async function handler(req, res) {
       satispayPaymentId: payment.id,
       status: 'pending_payment',
     });
-
+console.log('Satispay payment object:', JSON.stringify(payment, null, 2));
     res.status(200).json({
       paymentId: payment.id,
       redirectUrl,
