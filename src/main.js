@@ -78,8 +78,8 @@ async function handlePaymentReturn() {
 
     if (confirmed) {
       showToast('Pagamento completato! Riceverai una conferma via email.', 'success');
-    } else {
-      showToast('Pagamento in attesa di conferma. Ti aggiorneremo via email.', 'error');
+    // } else {
+    //   showToast('Pagamento in attesa di conferma. Ti aggiorneremo via email.', 'error');
     }
   }
 }
