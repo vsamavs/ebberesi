@@ -34,10 +34,6 @@ export default async function handler(req, res) {
   try {
     const { bookingId, amount, eventTitle } = req.body;
 
-    // Detect if request comes from mobile
-    const userAgent = req.headers['user-agent'] || '';
-    const isMobile = /iPhone|iPad|Android/i.test(userAgent);
-
     const payment = await satispay.create_payment({
       flow: 'MATCH_CODE',
       amount_unit: amount,
@@ -48,21 +44,15 @@ export default async function handler(req, res) {
       redirect_url: `${req.headers.origin}/?payment=success&booking=${bookingId}&method=satispay`,
     });
 
-    // On mobile, return the deep link to open the app directly
-    const redirectUrl = isMobile
-      ? `satispay://pay?payment_id=${payment.id}`
-      : payment.redirect_url;    
-
     // Update booking
     await db.collection('bookings').doc(bookingId).update({
       satispayPaymentId: payment.id,
       status: 'pending_payment',
     });
-console.log('Satispay payment object:', JSON.stringify(payment, null, 2));
+
     res.status(200).json({
       paymentId: payment.id,
-      redirectUrl,
-      isMobile,
+      redirectUrl: payment.redirect_url,
     });
   } catch (err) {
     console.error('Satispay error:', err);

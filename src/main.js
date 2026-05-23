@@ -684,16 +684,16 @@ window.processPayment = async function () {
       const data = await res.json();
 
       if (data.redirectUrl) {
-        if (data.isMobile && data.redirectUrl.startsWith('satispay://')) {
-          // Try to open the app, fallback to web after 2 seconds
+        // if (data.isMobile && data.redirectUrl.startsWith('satispay://')) {
+        //   // Try to open the app, fallback to web after 2 seconds
+        //   window.location.href = data.redirectUrl;
+        //   setTimeout(() => {
+        //     // If we're still here, app not installed — go to web page
+        //     window.location.href = `https://pos.satispay.com/pay?payment_id=${data.paymentId}`;
+        //   }, 2000);
+        // } else {
           window.location.href = data.redirectUrl;
-          setTimeout(() => {
-            // If we're still here, app not installed — go to web page
-            window.location.href = `https://pos.satispay.com/pay?payment_id=${data.paymentId}`;
-          }, 2000);
-        } else {
-          window.location.href = data.redirectUrl;
-        }
+        // }
         return;
       }
       throw new Error(data.error || 'Errore Satispay');
