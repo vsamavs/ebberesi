@@ -39,14 +39,14 @@ export default async function handler(req, res) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const bookingId = session.metadata?.bookingId;
-debugger;
+
       if (bookingId) {
-        // await db.collection('bookings').doc(bookingId).update({
-        //   status: 'paid',
-        //   paymentId: session.payment_intent,
-        //   paidAt: admin.firestore.FieldValue.serverTimestamp(),
-        // });
-        await confirmBooking(db, bookingId, session.payment_intent);
+        await db.collection('bookings').doc(bookingId).update({
+          status: 'paid',
+          paymentId: session.payment_intent,
+          paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        // await confirmBooking(db, bookingId, session.payment_intent);
 
         // Get booking data for email
         const bookingDoc = await db.collection('bookings').doc(bookingId).get();
