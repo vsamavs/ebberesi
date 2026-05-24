@@ -39,7 +39,7 @@ export default async function handler(req, res) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const bookingId = session.metadata?.bookingId;
-
+debugger;
       if (bookingId) {
         // await db.collection('bookings').doc(bookingId).update({
         //   status: 'paid',
