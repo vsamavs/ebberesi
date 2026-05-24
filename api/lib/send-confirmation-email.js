@@ -36,7 +36,7 @@ function emailWrapper(content) {
       <div style="border-top: 1px solid #eee; padding: 24px 32px; text-align: center;">
         <p style="font-size: 12px; color: ${INK_MUTED}; margin: 0 0 8px;">Ebbere Si — Associazione Culturale di Degustazione</p>
         <p style="font-size: 11px; color: ${INK_MUTED}; margin: 0;">
-          <a href="https://ebberesi.vercel.app" style="color: ${BRAND_COLOR}; text-decoration: none;">ebberesi.vercel.app</a>
+          <a href="https://ebberesi.it" style="color: ${BRAND_COLOR}; text-decoration: none;">ebberesi.it</a>
         </p>
       </div>
     </div>
