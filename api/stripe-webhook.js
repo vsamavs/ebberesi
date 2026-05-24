@@ -5,6 +5,7 @@ import Stripe from 'stripe';
 import admin from 'firebase-admin';
 import { activateMembershipIfNeeded } from './lib/activate-membership.js';
 import { sendBookingConfirmation } from './lib/send-confirmation-email.js';
+import { confirmBooking } from './lib/confirm-booking.js';
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -40,11 +41,12 @@ export default async function handler(req, res) {
       const bookingId = session.metadata?.bookingId;
 
       if (bookingId) {
-        await db.collection('bookings').doc(bookingId).update({
-          status: 'paid',
-          paymentId: session.payment_intent,
-          paidAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        // await db.collection('bookings').doc(bookingId).update({
+        //   status: 'paid',
+        //   paymentId: session.payment_intent,
+        //   paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        // });
+        await confirmBooking(db, bookingId, session.payment_intent);
 
         // Get booking data for email
         const bookingDoc = await db.collection('bookings').doc(bookingId).get();

@@ -55,13 +55,13 @@ export async function createBooking(bookingData) {
     createdAt: Timestamp.now(),
   });
 
-  // Update booked spots on the event
-  const eventRef = doc(db, 'events', bookingData.eventId);
-  const eventSnap = await getDoc(eventRef);
-  if (eventSnap.exists()) {
-    const current = eventSnap.data().bookedSpots || 0;
-    await updateDoc(eventRef, { bookedSpots: current + bookingData.qty });
-  }
+  // // Update booked spots on the event
+  // const eventRef = doc(db, 'events', bookingData.eventId);
+  // const eventSnap = await getDoc(eventRef);
+  // if (eventSnap.exists()) {
+  //   const current = eventSnap.data().bookedSpots || 0;
+  //   await updateDoc(eventRef, { bookedSpots: current + bookingData.qty });
+  // }
 
   return ref.id;
 }

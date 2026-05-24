@@ -4,6 +4,8 @@ import admin from 'firebase-admin';
 import { activateMembershipIfNeeded } from './lib/activate-membership.js';
 import { sendBookingConfirmation } from './lib/send-confirmation-email.js';
 import { createRequire } from 'module';
+import { confirmBooking } from './lib/confirm-booking.js';
+
 const require = createRequire(import.meta.url);
 const satispay = require('node-satispay');
 
@@ -38,11 +40,13 @@ export default async function handler(req, res) {
     if (payment.status === 'ACCEPTED' && payment.external_code) {
       const bookingId = payment.external_code;
 
-      await db.collection('bookings').doc(bookingId).update({
-        status: 'paid',
-        paymentId: id,
-        paidAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      // await db.collection('bookings').doc(bookingId).update({
+      //   status: 'paid',
+      //   paymentId: id,
+      //   paidAt: admin.firestore.FieldValue.serverTimestamp(),
+      // });
+
+      await confirmBooking(db, bookingId, id);
 
       // Send booking confirmation email
       const bookingDoc = await db.collection('bookings').doc(bookingId).get();

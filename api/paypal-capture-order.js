@@ -4,6 +4,7 @@
 import admin from 'firebase-admin';
 import { activateMembershipIfNeeded } from './lib/activate-membership.js';
 import { sendBookingConfirmation } from './lib/send-confirmation-email.js';
+import { confirmBooking } from './lib/confirm-booking.js';
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -61,11 +62,12 @@ export default async function handler(req, res) {
     const capture = await captureRes.json();
 
     if (capture.status === 'COMPLETED') {
-      await db.collection('bookings').doc(bookingId).update({
-        status: 'paid',
-        paymentId: capture.id,
-        paidAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      // await db.collection('bookings').doc(bookingId).update({
+      //   status: 'paid',
+      //   paymentId: capture.id,
+      //   paidAt: admin.firestore.FieldValue.serverTimestamp(),
+      // });
+      await confirmBooking(db, bookingId, capture.id);
 
       // Get booking data for email
       const bookingDoc = await db.collection('bookings').doc(bookingId).get();
