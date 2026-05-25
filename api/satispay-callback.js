@@ -1,9 +1,9 @@
 // Vercel Serverless Function — /api/satispay-callback.js
 
 import admin from 'firebase-admin';
+import { createRequire } from 'module';
 import { activateMembershipIfNeeded } from './lib/activate-membership.js';
 import { sendBookingConfirmation } from './lib/send-confirmation-email.js';
-import { createRequire } from 'module';
 import { confirmBooking } from './lib/confirm-booking.js';
 
 const require = createRequire(import.meta.url);
@@ -21,7 +21,6 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// const satispay = require('node-satispay');
 satispay.config({
   key_id: process.env.SATISPAY_KEY_ID,
   private_key: process.env.SATISPAY_PRIVATE_KEY?.replace(/\\n/g, '\n'),
@@ -29,24 +28,20 @@ satispay.config({
 });
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
+  if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).end();
 
   try {
-    const { id } = req.body;
+    // Get payment ID from POST body or GET query
+    const paymentId = req.body?.id || req.query?.payment_id;
+    if (!paymentId) return res.status(400).json({ error: 'Missing payment_id' });
 
-    // Verify payment status directly with Satispay API
-    const payment = await satispay.get_payment_details(id);
+    // Verify payment status with Satispay
+    const payment = await satispay.get_payment_details(paymentId);
 
     if (payment.status === 'ACCEPTED' && payment.external_code) {
       const bookingId = payment.external_code;
 
-      // await db.collection('bookings').doc(bookingId).update({
-      //   status: 'paid',
-      //   paymentId: id,
-      //   paidAt: admin.firestore.FieldValue.serverTimestamp(),
-      // });
-
-      await confirmBooking(db, bookingId, id);
+      await confirmBooking(db, bookingId, paymentId);
 
       // Send booking confirmation email
       const bookingDoc = await db.collection('bookings').doc(bookingId).get();
@@ -73,9 +68,7 @@ export default async function handler(req, res) {
         }
       }
 
-      // Activate membership if needed
       await activateMembershipIfNeeded(db, bookingId);
-
       console.log(`Booking ${bookingId} confirmed via Satispay`);
     }
 
