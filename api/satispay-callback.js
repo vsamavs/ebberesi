@@ -32,6 +32,9 @@ export default async function handler(req, res) {
 
   try {
     // Get payment ID from POST body or GET query
+console.log('Satispay callback method:', req.method);
+console.log('Satispay callback query:', JSON.stringify(req.query));
+console.log('Satispay callback body:', JSON.stringify(req.body));    
     const paymentId = req.body?.id || req.query?.payment_id;
     if (!paymentId) return res.status(400).json({ error: 'Missing payment_id' });
 
