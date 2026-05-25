@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       currency: 'EUR',
       description: `${eventTitle} — Ebbere Si`,
       external_code: bookingId,
-      callback_url: `${req.headers.origin}/api/satispay-callback`,
+      callback_url: `${req.headers.origin}/api/satispay-callback?booking=${bookingId}`,
       redirect_url: `${req.headers.origin}/?payment=success&booking=${bookingId}&method=satispay`,
     });
 

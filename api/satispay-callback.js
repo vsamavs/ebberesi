@@ -31,20 +31,25 @@ export default async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).end();
 
   try {
-    // Get payment ID from POST body or GET query
-console.log('Satispay callback method:', req.method);
-console.log('Satispay callback query:', JSON.stringify(req.query));
-console.log('Satispay callback body:', JSON.stringify(req.body));    
-    const paymentId = req.body?.id || req.query?.payment_id;
-    if (!paymentId) return res.status(400).json({ error: 'Missing payment_id' });
+    console.log('Satispay callback method:', req.method);
+    console.log('Satispay callback query:', JSON.stringify(req.query));
+
+    const bookingId = req.query?.booking;
+    if (!bookingId) return res.status(400).json({ error: 'Missing booking' });
+
+    // Get the satispay payment ID from the booking
+    const bookingDoc = await db.collection('bookings').doc(bookingId).get();
+    if (!bookingDoc.exists) return res.status(404).json({ error: 'Booking not found' });
+
+    const bookingData = bookingDoc.data();
+    const satispayPaymentId = bookingData.satispayPaymentId;
+    if (!satispayPaymentId) return res.status(400).json({ error: 'No Satispay payment ID' });
 
     // Verify payment status with Satispay
-    const payment = await satispay.get_payment_details(paymentId);
+    const payment = await satispay.get_payment_details(satispayPaymentId);
 
-    if (payment.status === 'ACCEPTED' && payment.external_code) {
-      const bookingId = payment.external_code;
-
-      await confirmBooking(db, bookingId, paymentId);
+    if (payment.status === 'ACCEPTED') {
+      await confirmBooking(db, bookingId, satispayPaymentId);
 
       // Send booking confirmation email
       const bookingDoc = await db.collection('bookings').doc(bookingId).get();
