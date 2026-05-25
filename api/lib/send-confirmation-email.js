@@ -58,7 +58,10 @@ export async function sendBookingConfirmation(booking) {
   const content = `
     <!-- Checkmark -->
     <div style="text-align:center;margin-bottom:24px">
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(46,125,50,0.1);display:inline-flex;align-items:center;justify-content:center;font-size:28px;color:#2E7D32">✓</div>
+      <svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg" style="display:inline-block">
+        <circle cx="28" cy="28" r="28" fill="rgba(46,125,50,0.1)"/>
+        <path d="M18 28l7 7 13-13" fill="none" stroke="#2E7D32" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </div>
 
     <h2 style="font-family:Georgia,serif;font-size:22px;font-weight:400;text-align:center;color:${INK_COLOR};margin:0 0 8px">Prenotazione confermata!</h2>
