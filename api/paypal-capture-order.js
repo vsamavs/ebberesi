@@ -81,7 +81,7 @@ export default async function handler(req, res) {
           const eventDate = eventData.date?.toDate ? eventData.date.toDate() : null;
           const months = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
           const dateFormatted = eventDate
-            ? `${eventDate.getDate()} ${months[eventDate.getMonth()]} ${eventDate.getFullYear()} — ${String(eventDate.getHours()).padStart(2,'0')}:${String(eventDate.getMinutes()).padStart(2,'0')}`
+            ? eventDate.toLocaleString('it-IT', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' })
             : '';
 
           await sendBookingConfirmation({
