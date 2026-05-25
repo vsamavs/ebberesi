@@ -721,7 +721,13 @@ function initNewsletterForm() {
       return;
     }
     try {
-      const result = await subscribeNewsletter(email);
+
+      const res = await fetch('/api/subscribe-newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const result = await res.json();
       if (result.alreadySubscribed) {
         showToast('Sei già iscritto alla newsletter!', 'success');
       } else {

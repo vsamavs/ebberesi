@@ -3,6 +3,7 @@
 
 import admin from 'firebase-admin';
 import { sendMembershipConfirmation } from './send-confirmation-email.js';
+import { syncMemberSubscriber } from './mailerlite.js';
 
 export async function activateMembershipIfNeeded(db, bookingId) {
   const bookingDoc = await db.collection('bookings').doc(bookingId).get();
@@ -16,13 +17,10 @@ export async function activateMembershipIfNeeded(db, bookingId) {
   // Calculate expiry date
   let expiresAt;
   if (booking.isRenewal && booking.renewFromDate) {
-    // Renewal: 1 year from the OLD expiry date, not from now
     const oldExpiry = new Date(booking.renewFromDate);
-    // If old expiry is in the past, start from now instead
     const startDate = oldExpiry > new Date() ? oldExpiry : new Date();
     expiresAt = new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
   } else {
-    // New membership: 1 year from now
     expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
   }
 
@@ -41,10 +39,10 @@ export async function activateMembershipIfNeeded(db, bookingId) {
     bookingId: bookingId,
   };
 
-  // Create or update member document using email as ID
+  // Create or update member document
   await db.collection('members').doc(booking.email).set(memberData, { merge: true });
 
-  // Mark booking as membership activated (prevent double activation)
+  // Mark booking as membership activated
   await db.collection('bookings').doc(bookingId).update({
     membershipActivated: true,
   });
@@ -54,7 +52,18 @@ export async function activateMembershipIfNeeded(db, bookingId) {
     await sendMembershipConfirmation({ ...memberData, expiresAt }, booking.isRenewal || false);
   } catch (emailErr) {
     console.error('Failed to send membership email:', emailErr);
-    // Don't fail the whole process if email fails
+  }
+
+  // Sync to MailerLite — add to "Soci" group
+  try {
+    await syncMemberSubscriber({
+      email: booking.email,
+      name: booking.name,
+      surname: booking.surname,
+      phone: booking.phone || '',
+    });
+  } catch (mlErr) {
+    console.error('MailerLite sync error (membership):', mlErr);
   }
 
   const action = booking.isRenewal ? 'renewed' : 'activated';

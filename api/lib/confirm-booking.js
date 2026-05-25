@@ -1,5 +1,8 @@
 // /api/lib/confirm-booking.js
+// Called after payment confirmation — updates booking, reserves spots, syncs to MailerLite
+
 import admin from 'firebase-admin';
+import { syncEventSubscriber } from './mailerlite.js';
 
 export async function confirmBooking(db, bookingId, paymentId) {
   const bookingRef = db.collection('bookings').doc(bookingId);
@@ -22,7 +25,7 @@ export async function confirmBooking(db, bookingId, paymentId) {
     paidAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // Aggiorna i posti occupati sull'evento (solo se è una booking di evento)
+  // Aggiorna i posti occupati sull'evento
   if (booking.eventId) {
     try {
       await db.runTransaction(async (tx) => {
@@ -38,6 +41,22 @@ export async function confirmBooking(db, bookingId, paymentId) {
       console.log(`Booking ${bookingId} confirmed, ${booking.qty} spots added to event ${booking.eventId}`);
     } catch (err) {
       console.error(`Failed to update bookedSpots for event ${booking.eventId}:`, err);
+    }
+
+    // Sync to MailerLite — add subscriber to event group
+    try {
+      const eventDoc = await db.collection('events').doc(booking.eventId).get();
+      const eventTitle = eventDoc.exists ? eventDoc.data().title : booking.eventTitle;
+
+      await syncEventSubscriber({
+        email: booking.email,
+        name: booking.name,
+        surname: booking.surname,
+        phone: booking.phone || '',
+        eventTitle: eventTitle || 'Evento',
+      });
+    } catch (mlErr) {
+      console.error('MailerLite sync error (event):', mlErr);
     }
   }
 }
