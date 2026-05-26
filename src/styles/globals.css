@@ -123,3 +123,21 @@ body {
   transform: translateY(-2px);
   background: #e0e0e0;
 }
+
+.btn-notify-link{
+    display:block;
+    text-align:center;
+    padding:12px 0 0;
+    margin-top:14px;
+    border-top:1px solid var(--border);
+    font-family:var(--sans);
+    font-size:.78rem;
+    color:var(--accent);
+    text-decoration:none;
+    letter-spacing:.02em;
+    transition:opacity .2s
+}
+.btn-notify-link:hover{
+    opacity:.7
+}
+

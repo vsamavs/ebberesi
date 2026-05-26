@@ -132,7 +132,7 @@ function renderEvents(events) {
 
     // Button logic
     let actionButton;
-    if (isPlanning) {
+if (isPlanning) {
       actionButton = `<span class="btn-book-planning">In programmazione</span>`;
     } else if (isBookable) {
       actionButton = `<button class="btn-book" onclick="window.openBooking('${ev.id}')">Prenota</button>`;
@@ -170,6 +170,7 @@ function renderEvents(events) {
             </div>
             ${actionButton}
           </div>
+          ${isPlanning ? '<a href="#newsletter" class="btn-notify-link">Avvisami quando sarà disponibile →</a>' : ''}
         </div>
       </div>
     `;
