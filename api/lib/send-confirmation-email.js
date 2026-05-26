@@ -191,3 +191,58 @@ export async function sendMembershipConfirmation(memberData, isRenewal = false) 
 
   console.log(`Membership ${isRenewal ? 'renewal' : 'activation'} email sent to ${memberData.email}`);
 }
+
+/**
+ * Send notification to admin when someone books an event
+ */
+export async function sendAdminBookingNotification(booking) {
+  const content = `
+    <h2 style="font-family:Georgia,serif;font-size:20px;font-weight:400;color:${INK_COLOR};margin:0 0 20px">Nuova prenotazione!</h2>
+
+    <table style="width:100%;border-collapse:collapse">
+      <tr>
+        <td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Evento</td>
+        <td style="padding:8px 0;font-size:14px;color:${INK_COLOR};text-align:right;font-weight:500">${booking.eventTitle}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Nome</td>
+        <td style="padding:8px 0;font-size:14px;color:${INK_COLOR};text-align:right">${booking.name} ${booking.surname}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Email</td>
+        <td style="padding:8px 0;font-size:14px;color:${INK_COLOR};text-align:right">${booking.email}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Telefono</td>
+        <td style="padding:8px 0;font-size:14px;color:${INK_COLOR};text-align:right">${booking.phone || '-'}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Biglietti</td>
+        <td style="padding:8px 0;font-size:14px;color:${INK_COLOR};text-align:right">${booking.qty}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Totale</td>
+        <td style="padding:8px 0;font-size:14px;color:${BRAND_COLOR};text-align:right;font-weight:500;font-family:Georgia,serif">€${booking.total.toFixed(2).replace('.', ',')}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Metodo</td>
+        <td style="padding:8px 0;font-size:14px;color:${INK_COLOR};text-align:right">${booking.paymentMethod}</td>
+      </tr>
+      ${booking.notes ? `<tr><td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Note</td><td style="padding:8px 0;font-size:14px;color:${INK_COLOR};text-align:right">${booking.notes}</td></tr>` : ''}
+      ${booking.isNewMember ? `<tr><td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Nuovo socio</td><td style="padding:8px 0;font-size:14px;color:#2E7D32;text-align:right">Sì ✓</td></tr>` : ''}
+    </table>
+
+    <div style="margin-top:20px;padding:12px 16px;background:${BG_COLOR};border-radius:8px">
+      <p style="font-size:12px;color:${INK_MUTED};margin:0">ID prenotazione: <strong>${booking.bookingId}</strong></p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"Ebbere Si" <${process.env.GMAIL_USER_ALIAS}>`,
+    to: 'ebberesi@gmail.com',
+    subject: `Nuova prenotazione — ${booking.name} ${booking.surname} — ${booking.eventTitle}`,
+    html: emailWrapper(content),
+  });
+
+  console.log(`Admin notification sent for booking ${booking.bookingId}`);
+}

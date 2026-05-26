@@ -3,7 +3,7 @@
 import admin from 'firebase-admin';
 import { createRequire } from 'module';
 import { activateMembershipIfNeeded } from './lib/activate-membership.js';
-import { sendBookingConfirmation } from './lib/send-confirmation-email.js';
+import { sendBookingConfirmation, sendAdminBookingNotification } from './lib/send-confirmation-email.js';
 import { confirmBooking } from './lib/confirm-booking.js';
 
 const require = createRequire(import.meta.url);
@@ -71,6 +71,11 @@ export default async function handler(req, res) {
             eventDate: dateFormatted,
             eventLocation: eventData.location || '',
           });
+
+          await sendAdminBookingNotification({
+            ...booking,
+            bookingId,
+          });          
         } catch (emailErr) {
           console.error('Failed to send booking email:', emailErr);
         }
