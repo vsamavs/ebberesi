@@ -94,7 +94,9 @@ export default async function handler(req, res) {
           await sendAdminBookingNotification({
             ...booking,
             bookingId,
-          });          
+            bookedSpots: eventData.bookedSpots || 0,
+            totalSpots: eventData.totalSpots || '?',
+          });
         } catch (emailErr) {
           console.error('Failed to send booking email:', emailErr);
         }

@@ -221,6 +221,10 @@ export async function sendAdminBookingNotification(booking) {
         <td style="padding:8px 0;font-size:14px;color:${INK_COLOR};text-align:right">${booking.qty}</td>
       </tr>
       <tr>
+        <td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Posti totali prenotati</td>
+        <td style="padding:8px 0;font-size:14px;color:${INK_COLOR};text-align:right">${booking.bookedSpots || '?'} / ${booking.totalSpots || '?'}</td>
+      </tr>      
+      <tr>
         <td style="padding:8px 0;font-size:14px;color:${INK_MUTED}">Totale</td>
         <td style="padding:8px 0;font-size:14px;color:${BRAND_COLOR};text-align:right;font-weight:500;font-family:Georgia,serif">€${booking.total.toFixed(2).replace('.', ',')}</td>
       </tr>

@@ -71,10 +71,12 @@ export default async function handler(req, res) {
               eventLocation: eventData.location || booking.eventLocation || '',
             });
 
-            await sendAdminBookingNotification({
-              ...booking,
-              bookingId,
-            });            
+          await sendAdminBookingNotification({
+            ...booking,
+            bookingId,
+            bookedSpots: eventData.bookedSpots || 0,
+            totalSpots: eventData.totalSpots || '?',
+          });           
           } catch (emailErr) {
             console.error('Failed to send booking email:', emailErr);
           }
