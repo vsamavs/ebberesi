@@ -98,7 +98,8 @@ export async function sendBookingConfirmation(booking) {
         ${discountLine}
         ${memberFeeLine}
         <tr style="border-top:2px solid #eee">
-          <td style="padding:12px 0 0;font-size:16px;font-weight:500;color:${INK_COLOR}">Totale pagato</td>
+          <tr style="border-top:2px solid #eee">
+          <td style="padding:12px 0 0;font-size:16px;font-weight:500;color:${INK_COLOR}">${booking.isPendingCash ? 'Da pagare' : 'Totale pagato'}</td>
           <td style="padding:12px 0 0;font-size:18px;font-weight:500;color:${BRAND_COLOR};text-align:right;font-family:Georgia,serif">€${booking.total.toFixed(2).replace('.', ',')}</td>
         </tr>
       </table>

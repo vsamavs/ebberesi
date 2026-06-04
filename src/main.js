@@ -13,7 +13,9 @@ let isVerifiedMember = false;
 let needsMemberSignup = false;
 let membershipInfo = null;
 let discountCode = null;
+let adminCashPaid = true;
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
 
 // ===================================================================
 // INIT
@@ -236,6 +238,25 @@ window.openBooking = function (eventId) {
   const codeBtn = document.getElementById('btnApplyCode');
   if (codeBtn) codeBtn.style.display = '';
 
+// Show cash option and custom price only for admin
+  const cashOption = document.getElementById('paymentCash');
+  const adminPriceSection = document.getElementById('adminPriceSection');
+  const isAdmin = currentUser?.email === ADMIN_EMAIL;
+  if (cashOption) cashOption.style.display = isAdmin ? 'flex' : 'none';
+  if (adminPriceSection) {
+    adminPriceSection.style.display = isAdmin ? 'block' : 'none';
+    const adminPriceInput = document.getElementById('adminCustomPrice');
+    if (adminPriceInput) adminPriceInput.value = '';
+    if (currentEvent) delete currentEvent._adminPrice;
+    adminCashPaid = true;
+    const paidSwitch = document.getElementById('adminPaidSwitch');
+    if (paidSwitch) paidSwitch.classList.add('on');
+    const paidLabel = document.getElementById('adminPaidLabel');
+    if (paidLabel) paidLabel.textContent = 'Già pagato';
+    const paidDesc = document.getElementById('adminPaidDesc');
+    if (paidDesc) paidDesc.textContent = 'Il pagamento è già stato ricevuto';
+  }
+
   // If logged in and verified member, auto-enable and lock toggle
   if (currentUser && isVerifiedMember) {
     isMember = true;
@@ -385,11 +406,12 @@ function updateQtyUI() {
   const s = document.getElementById('orderSummary');
   if (qty > 0 && currentEvent) {
     s.style.display = 'block';
-    const sub = qty * currentEvent.price;
+    const effectivePrice = currentEvent._adminPrice !== undefined ? currentEvent._adminPrice : currentEvent.price;
+    const sub = qty * effectivePrice;
     // 15% member discount on ONE ticket only
-    const memberDisc = isMember ? currentEvent.price * 0.15 : 0;
+    const memberDisc = isMember ? effectivePrice * 0.15 : 0;
     // Discount code on ONE ticket only
-    const codeDisc = discountCode ? currentEvent.price * (discountCode.percentage / 100) : 0;
+    const codeDisc = discountCode ? effectivePrice * (discountCode.percentage / 100) : 0;
     // Membership fee if toggling socio but not yet a member
     const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
     const total = sub - memberDisc - codeDisc + memberFee;
@@ -513,7 +535,7 @@ window.validateStep2 = function () {
     { id: 'fieldNome', err: 'errNome', test: v => v.trim().length >= 2 },
     { id: 'fieldCognome', err: 'errCognome', test: v => v.trim().length >= 2 },
     { id: 'fieldEmail', err: 'errEmail', test: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
-    { id: 'fieldTelefono', err: 'errTelefono', test: v => v.replace(/\s/g, '').length >= 8 },
+    { id: 'fieldTelefono', err: 'errTelefono', test: v => (currentUser?.email === ADMIN_EMAIL) || v.replace(/\s/g, '').length >= 8 },
   ];
   fields.forEach(f => {
     const inp = document.getElementById(f.id);
@@ -553,9 +575,10 @@ window.validateMembershipAndContinue = function () {
 // ===================================================================
 function populateRecap() {
   if (!currentEvent) return;
-  const sub = qty * currentEvent.price;
-  const memberDisc = isMember ? currentEvent.price * 0.15 : 0;
-  const codeDisc = discountCode ? currentEvent.price * (discountCode.percentage / 100) : 0;
+  const effectivePrice = currentEvent._adminPrice !== undefined ? currentEvent._adminPrice : currentEvent.price;
+  const sub = qty * effectivePrice;
+  const memberDisc = isMember ? effectivePrice * 0.15 : 0;
+  const codeDisc = discountCode ? effectivePrice * (discountCode.percentage / 100) : 0;
   const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
   const total = sub - memberDisc - codeDisc + memberFee;
   const d = formatDate(currentEvent.date);
@@ -601,7 +624,7 @@ window.selectPayment = function (method) {
     o.classList.toggle('selected', o.dataset.method === method)
   );
   document.getElementById('btnPay').disabled = false;
-  const labels = { stripe: 'Paga con carta', paypal: 'Paga con PayPal', satispay: 'Paga con Satispay' };
+  const labels = { stripe: 'Paga con carta', paypal: 'Paga con PayPal', satispay: 'Paga con Satispay', cash: 'Conferma (Contanti)' };
   document.getElementById('btnPay').textContent = labels[method];
 };
 
@@ -611,9 +634,10 @@ window.processPayment = async function () {
   btn.disabled = true;
   btn.textContent = 'Elaborazione\u2026';
 
-  const sub = qty * currentEvent.price;
-  const disc = isMember ? currentEvent.price * 0.15 : 0;
-  const codeDisc = discountCode ? currentEvent.price * (discountCode.percentage / 100) : 0;
+  const effectivePrice = currentEvent._adminPrice !== undefined ? currentEvent._adminPrice : currentEvent.price;
+  const sub = qty * effectivePrice;
+  const disc = isMember ? effectivePrice * 0.15 : 0;
+  const codeDisc = discountCode ? effectivePrice * (discountCode.percentage / 100) : 0;
   const memberFee = (isMember && !isVerifiedMember) ? 10 : 0;
   const total = sub - disc - codeDisc + memberFee;
   const amountCents = Math.round(total * 100);
@@ -625,7 +649,7 @@ window.processPayment = async function () {
       eventId: currentEvent.id,
       eventTitle: currentEvent.title,
       qty,
-      unitPrice: currentEvent.price,
+      unitPrice: effectivePrice,
       discount: disc,
       memberFee,
       total,
@@ -698,6 +722,22 @@ window.processPayment = async function () {
         return;
       }
       throw new Error(data.error || 'Errore Satispay');
+    }
+
+    // ---- CASH (Admin only) ----
+    if (selectedPayment === 'cash') {
+      const res = await fetch('/api/admin-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, adminEmail: currentUser.email, isPaid: adminCashPaid }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('confirmEmail').textContent = email;
+        window.goStep(4);
+        return;
+      }
+      throw new Error(data.error || 'Errore');
     }
 
   } catch (err) {
@@ -1282,4 +1322,23 @@ window.processMembershipPayment = async function () {
     btn.disabled = false;
     btn.textContent = 'Riprova';
   }
+};
+
+window.updateAdminPrice = function () {
+  const customPrice = parseFloat(document.getElementById('adminCustomPrice').value);
+  if (!isNaN(customPrice) && customPrice >= 0 && currentEvent) {
+    currentEvent._adminPrice = customPrice;
+  } else if (currentEvent) {
+    delete currentEvent._adminPrice;
+  }
+  updateQtyUI();
+};
+
+window.toggleAdminPaid = function () {
+  adminCashPaid = !adminCashPaid;
+  document.getElementById('adminPaidSwitch').classList.toggle('on', adminCashPaid);
+  document.getElementById('adminPaidLabel').textContent = adminCashPaid ? 'Già pagato' : 'Da pagare';
+  document.getElementById('adminPaidDesc').textContent = adminCashPaid
+    ? 'Il pagamento è già stato ricevuto'
+    : 'Il pagamento verrà effettuato in loco';
 };

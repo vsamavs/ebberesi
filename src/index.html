@@ -186,7 +186,23 @@
               <span>✓</span> <span id="discountCodeMsg"></span>
               <button onclick="removeDiscountCode()" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:.78rem;margin-left:auto">Rimuovi</button>
             </div>
-          </div>          
+          </div>      
+          <div id="adminPriceSection" style="display:none;margin-bottom:20px">
+            <div style="padding:12px 16px;background:var(--gold-soft);border-radius:var(--radius-sm);margin-bottom:12px">
+              <strong style="font-size:.82rem;color:var(--ink)">⚙ Modalità Admin</strong>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Prezzo per biglietto (€)</label>
+              <input class="form-input" type="number" id="adminCustomPrice" placeholder="Es. 25" step="0.01" min="0" oninput="updateAdminPrice()">
+            </div>
+            <div class="member-toggle" onclick="toggleAdminPaid()" style="margin-top:12px">
+              <div class="toggle-switch on" id="adminPaidSwitch"></div>
+              <div class="member-toggle-text">
+                <strong id="adminPaidLabel">Già pagato</strong>
+                <small id="adminPaidDesc">Il pagamento è già stato ricevuto</small>
+              </div>
+            </div>            
+          </div>              
           <div class="order-summary" id="orderSummary" style="display:none">
             <div class="order-line"><span id="summaryQtyLabel"></span><span id="summarySubtotal"></span></div>
             <div class="order-line discount" id="summaryDiscountRow" style="display:none"><span>Sconto socio (&minus;15% su 1 biglietto)</span><span id="summaryDiscount"></span></div>
@@ -226,6 +242,11 @@
             <div class="payment-option" onclick="selectPayment('paypal')" data-method="paypal"><div class="payment-radio"><div class="payment-radio-dot"></div></div><div class="payment-icon paypal">PayPal</div><div class="payment-info"><div class="payment-name">PayPal</div><div class="payment-desc">Paga con il tuo conto PayPal</div></div></div>
             <div class="payment-option" onclick="selectPayment('satispay')" data-method="satispay"><div class="payment-radio"><div class="payment-radio-dot"></div></div><div class="payment-icon satispay">Satispay</div><div class="payment-info"><div class="payment-name">Satispay</div><div class="payment-desc">Paga dall'app Satispay</div></div></div>
           </div>
+          <div class="payment-option" data-method="cash" onclick="selectPayment('cash')" id="paymentCash" style="display:none">
+            <div class="payment-radio"><div class="payment-radio-dot"></div></div>
+            <div class="payment-icon" style="font-size:18px">💵</div>
+            <div class="payment-info"><div class="payment-name">Contanti (Admin)</div></div>
+          </div>          
           <div class="modal-actions"><button class="modal-btn modal-btn-back" onclick="goStep(2)">Indietro</button><button class="modal-btn modal-btn-pay" id="btnPay" disabled onclick="processPayment()">Scegli un metodo</button></div>
         </div>
         <!-- STEP 4 -->
