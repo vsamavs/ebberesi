@@ -293,6 +293,8 @@ function renderNewsletter() {
 // EDIT EVENT
 // ===================================================================
 window.editEvent = function (id) {
+
+  document.getElementById('editSaveBtn').style.display = '';
   const event = allData.events.find(e => e.id === id);
   if (!event) return;
   editingDoc = { collection: 'events', id };
@@ -315,6 +317,7 @@ window.editEvent = function (id) {
       </select>
     </div>
     <div class="field"><label>Descrizione breve</label><textarea id="editDescription">${event.description || ''}</textarea></div>
+    <div class="field"><label>Descrizione estesa (HTML)</label><textarea id="editLongDescription" style="min-height:200px">${event.longDescription || ''}</textarea></div>
     <div class="field"><label>Immagine (URL Cloudinary)</label><input id="editImage" value="${event.image || ''}"></div>
     <div class="field"><label>Pubblicato</label>
       <select id="editPublished">
@@ -343,6 +346,7 @@ window.saveEdit = async function () {
         bookedSpots: parseInt(document.getElementById('editBookedSpots').value) || 0,
         status: document.getElementById('editStatus').value,
         description: document.getElementById('editDescription').value,
+        longDescription: document.getElementById('editLongDescription').value,
         image: document.getElementById('editImage').value,
         published: document.getElementById('editPublished').value === 'true',
       };
