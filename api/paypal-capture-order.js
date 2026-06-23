@@ -2,9 +2,9 @@
 // Captures a PayPal order after user approval and sends confirmation email
 
 import admin from 'firebase-admin';
-import { activateMembershipIfNeeded } from './lib/activate-membership.js';
-import { sendBookingConfirmation, sendAdminBookingNotification } from './lib/send-confirmation-email.js';
-import { confirmBooking } from './lib/confirm-booking.js';
+import { activateMembershipIfNeeded } from './_lib/activate-membership.js';
+import { sendBookingConfirmation, sendAdminBookingNotification } from './_lib/send-confirmation-email.js';
+import { confirmBooking } from './_lib/confirm-booking.js';
 
 if (!admin.apps.length) {
   admin.initializeApp({

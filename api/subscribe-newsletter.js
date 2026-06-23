@@ -2,7 +2,7 @@
 // Saves to Firestore AND syncs to MailerLite
 
 import admin from 'firebase-admin';
-import { syncNewsletterSubscriber } from './lib/mailerlite.js';
+import { syncNewsletterSubscriber } from './_lib/mailerlite.js';
 
 if (!admin.apps.length) {
   admin.initializeApp({

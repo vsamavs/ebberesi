@@ -1,7 +1,7 @@
 import admin from 'firebase-admin';
-import { confirmBooking } from './lib/confirm-booking.js';
-import { sendBookingConfirmation, sendAdminBookingNotification } from './lib/send-confirmation-email.js';
-import { activateMembershipIfNeeded } from './lib/activate-membership.js';
+import { confirmBooking } from './_lib/confirm-booking.js';
+import { sendBookingConfirmation, sendAdminBookingNotification } from './_lib/send-confirmation-email.js';
+import { activateMembershipIfNeeded } from './_lib/activate-membership.js';
 
 if (!admin.apps.length) {
   admin.initializeApp({

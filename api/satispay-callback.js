@@ -2,9 +2,9 @@
 
 import admin from 'firebase-admin';
 import { createRequire } from 'module';
-import { activateMembershipIfNeeded } from './lib/activate-membership.js';
-import { sendBookingConfirmation, sendAdminBookingNotification } from './lib/send-confirmation-email.js';
-import { confirmBooking } from './lib/confirm-booking.js';
+import { activateMembershipIfNeeded } from './_lib/activate-membership.js';
+import { sendBookingConfirmation, sendAdminBookingNotification } from './_lib/send-confirmation-email.js';
+import { confirmBooking } from './_lib/confirm-booking.js';
 
 const require = createRequire(import.meta.url);
 const satispay = require('node-satispay');
