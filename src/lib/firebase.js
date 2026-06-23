@@ -30,6 +30,7 @@ export async function getEvents() {
   const q = query(
     collection(db, 'events'),
     where('published', '==', true),
+    where('date', '>=', Timestamp.now()),
     orderBy('date', 'asc')
   );
   const snap = await getDocs(q);
