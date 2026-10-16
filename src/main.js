@@ -487,7 +487,13 @@ window.applyDiscountCode = async function () {
 
   try {
     const result = await verifyDiscountCode(code);
-    if (result) {
+    if (result && isMember && result.code === 'COMMUNITY10') {
+      discountCode = null;
+      input.classList.add('error');
+      errEl.textContent = 'Questo codice non è cumulabile con lo sconto socio';
+      errEl.classList.add('show');
+      successEl.style.display = 'none';
+    } else if (result) {
       discountCode = result;
       input.classList.remove('error');
       errEl.classList.remove('show');
