@@ -382,7 +382,7 @@ async function saveExpense() {
 window.openReceipt = async function (publicId) {
   try {
     const token = await auth.currentUser.getIdToken();
-    const response = await fetch(`/api/receipt-url?publicId=${encodeURIComponent(publicId)}`, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await fetch(`/api/admin-receipts?publicId=${encodeURIComponent(publicId)}`, { headers: { Authorization: `Bearer ${token}` } });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || 'Documento non disponibile');
     window.open(payload.url, '_blank', 'noopener');
@@ -393,7 +393,7 @@ async function uploadReceipt(file) {
   if (!file.type.startsWith('image/')) throw new Error('Lo scontrino deve essere un’immagine.');
   const dataUri = await compressImage(file);
   const token = await auth.currentUser.getIdToken();
-  const response = await fetch('/api/upload-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ dataUri, fileName: file.name }) });
+  const response = await fetch('/api/admin-receipts', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ dataUri, fileName: file.name }) });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || 'Upload non riuscito');
   return payload.url;
