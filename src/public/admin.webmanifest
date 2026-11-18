@@ -1,0 +1,9 @@
+{
+  "name": "Ebbere Si Admin",
+  "short_name": "Ebbere Si Admin",
+  "start_url": "/admin.html",
+  "display": "standalone",
+  "background_color": "#FAF8F5",
+  "theme_color": "#8B2635",
+  "icons": [{ "src": "/admin-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

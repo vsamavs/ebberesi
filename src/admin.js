@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, query, where, orderBy, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -19,6 +19,10 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
 let currentTab = 'bookings';
 let allData = {};
 let editingDoc = null;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/admin-sw.js'));
+}
 
 // ===================================================================
 // AUTH
@@ -52,12 +56,13 @@ window.handleAdminLogout = async function () {
 // ===================================================================
 async function loadAllData() {
   try {
-    const [bookingsSnap, eventsSnap, membersSnap, usersSnap, newsletterSnap] = await Promise.all([
+    const [bookingsSnap, eventsSnap, membersSnap, usersSnap, newsletterSnap, expensesSnap] = await Promise.all([
       getDocs(query(collection(db, 'bookings'), orderBy('createdAt', 'desc'))),
       getDocs(query(collection(db, 'events'), orderBy('date', 'asc'))),
       getDocs(collection(db, 'members')),
       getDocs(collection(db, 'users')),
       getDocs(collection(db, 'newsletter')),
+      getDocs(query(collection(db, 'expenses'), orderBy('date', 'desc'))),
     ]);
 
     allData.bookings = bookingsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -65,6 +70,7 @@ async function loadAllData() {
     allData.members = membersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     allData.users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     allData.newsletter = newsletterSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    allData.expenses = expensesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     renderStats();
     switchTab(currentTab);
@@ -81,6 +87,7 @@ function renderStats() {
   const paidBookings = allData.bookings.filter(b => b.status === 'paid');
   const totalRevenue = paidBookings.reduce((sum, b) => sum + (b.total || 0), 0);
   const activeMembers = allData.members.filter(m => m.active);
+  const totalExpenses = (allData.expenses || []).reduce((sum, expense) => sum + (expense.amount || 0), 0);
   const upcomingEvents = allData.events.filter(e => {
     const d = e.date?.toDate ? e.date.toDate() : new Date(e.date);
     return d > new Date();
@@ -89,6 +96,8 @@ function renderStats() {
   document.getElementById('statsGrid').innerHTML = `
     <div class="stat-card"><div class="label">Prenotazioni</div><div class="value">${paidBookings.length}</div><div class="sub">${allData.bookings.length} totali</div></div>
     <div class="stat-card"><div class="label">Incasso</div><div class="value">€${totalRevenue.toFixed(0)}</div><div class="sub">da prenotazioni pagate</div></div>
+    <div class="stat-card"><div class="label">Uscite</div><div class="value">€${totalExpenses.toFixed(0)}</div><div class="sub">spese registrate</div></div>
+    <div class="stat-card"><div class="label">Saldo</div><div class="value">€${(totalRevenue - totalExpenses).toFixed(0)}</div><div class="sub">entrate meno uscite</div></div>
     <div class="stat-card"><div class="label">Soci attivi</div><div class="value">${activeMembers.length}</div><div class="sub">${allData.members.length} totali</div></div>
     <div class="stat-card"><div class="label">Prossimi eventi</div><div class="value">${upcomingEvents.length}</div><div class="sub">${allData.events.length} totali</div></div>
     <div class="stat-card"><div class="label">Newsletter</div><div class="value">${allData.newsletter.length}</div></div>
@@ -104,7 +113,7 @@ window.switchTab = function (tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelector(`.tab[onclick*="${tab}"]`)?.classList.add('active');
 
-  const renderers = { bookings: renderBookings, events: renderEvents, members: renderMembers, users: renderUsers, newsletter: renderNewsletter };
+  const renderers = { bookings: renderBookings, events: renderEvents, members: renderMembers, users: renderUsers, newsletter: renderNewsletter, accounting: renderAccounting };
   (renderers[tab] || renderBookings)();
 };
 
@@ -288,6 +297,133 @@ function renderNewsletter() {
     </div>
   `;
 }
+
+// ===================================================================
+// ACCOUNTING
+// Entrate are derived from confirmed bookings; expenses are internal records.
+// ===================================================================
+function renderAccounting() {
+  const expenses = allData.expenses || [];
+  const paidBookings = (allData.bookings || []).filter(b => b.status === 'paid');
+  const totalIncome = paidBookings.reduce((sum, booking) => sum + (booking.total || 0), 0);
+  const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+  const eventRows = (allData.events || []).map(event => {
+    const income = paidBookings.filter(b => b.eventId === event.id).reduce((sum, b) => sum + (b.total || 0), 0);
+    const costs = expenses.filter(e => e.eventId === event.id).reduce((sum, e) => sum + (e.amount || 0), 0);
+    return { event, income, costs };
+  }).filter(row => row.income || row.costs);
+
+  const movements = [
+    ...paidBookings.map(booking => ({
+      type: 'income', date: booking.paidAt || booking.createdAt, amount: booking.total || 0,
+      title: booking.eventTitle || 'Prenotazione', source: booking.paymentMethod || 'Pagamento', eventId: booking.eventId,
+    })),
+    ...expenses.map(expense => ({
+      type: 'expense', date: expense.date || expense.createdAt, amount: expense.amount || 0,
+      title: expense.supplier || expense.category || 'Spesa', source: expense.category || 'Spesa', receiptId: expense.receiptPublicId, eventId: expense.eventId,
+    })),
+  ].sort((a, b) => dateValue(b.date) - dateValue(a.date));
+
+  document.getElementById('tabContent').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Entrate confermate</div><div class="value">${formatEuro(totalIncome)}</div><div class="sub">${paidBookings.length} prenotazioni pagate</div></div>
+      <div class="stat-card"><div class="label">Uscite registrate</div><div class="value">${formatEuro(totalExpenses)}</div><div class="sub">${expenses.length} spese</div></div>
+      <div class="stat-card"><div class="label">Saldo</div><div class="value">${formatEuro(totalIncome - totalExpenses)}</div><div class="sub">movimenti disponibili</div></div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-toolbar"><h3>Movimenti</h3><div class="table-actions"><button class="btn-sm primary" onclick="openExpenseForm()">+ Registra spesa</button><button class="btn-sm" onclick="exportAccountingCSV()">📥 Esporta CSV</button></div></div>
+      <table id="dataTable"><thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Categoria / metodo</th><th>Importo</th><th>Documento</th></tr></thead>
+      <tbody>${movements.length ? movements.map(m => `<tr><td>${formatTs(m.date)}</td><td><span class="badge ${m.type === 'income' ? 'badge-paid' : 'badge-pending'}">${m.type === 'income' ? 'Entrata' : 'Uscita'}</span></td><td>${escapeHtml(m.title)}</td><td>${escapeHtml(m.source)}</td><td>${formatEuro(m.amount)}</td><td>${m.receiptId ? `<button class="btn-sm" onclick="openReceipt('${escapeAttribute(m.receiptId)}')">Apri</button>` : '—'}</td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">Nessun movimento disponibile</td></tr>'}</tbody></table>
+    </div>
+    <div class="table-wrap"><div class="table-toolbar"><h3>Risultato per evento</h3></div>
+      <table><thead><tr><th>Evento</th><th>Entrate</th><th>Uscite</th><th>Margine</th></tr></thead><tbody>${eventRows.length ? eventRows.map(({ event, income, costs }) => `<tr><td>${escapeHtml(event.title || 'Evento')}</td><td>${formatEuro(income)}</td><td>${formatEuro(costs)}</td><td>${formatEuro(income - costs)}</td></tr>`).join('') : '<tr><td colspan="4" class="empty-state">Nessun dato per evento</td></tr>'}</tbody></table>
+    </div>`;
+}
+
+window.openExpenseForm = function () {
+  editingDoc = { collection: 'expenses' };
+  document.getElementById('editModalTitle').textContent = 'Registra spesa';
+  document.getElementById('editModalBody').innerHTML = `
+    <div class="field"><label>Importo (€)</label><input id="expenseAmount" type="number" step="0.01" min="0.01" inputmode="decimal" required></div>
+    <div class="field"><label>Data</label><input id="expenseDate" type="date" value="${new Date().toISOString().slice(0, 10)}" required></div>
+    <div class="field"><label>Fornitore / descrizione</label><input id="expenseSupplier" maxlength="120" placeholder="Es. Enoteca Rossi" required></div>
+    <div class="field"><label>Categoria</label><select id="expenseCategory"><option value="Materiali">Materiali</option><option value="Cibo e bevande">Cibo e bevande</option><option value="Affitto">Affitto</option><option value="Trasporti">Trasporti</option><option value="Servizi">Servizi</option><option value="Altro">Altro</option></select></div>
+    <div class="field"><label>Evento (facoltativo)</label><select id="expenseEvent"><option value="">Non associata a un evento</option>${(allData.events || []).map(event => `<option value="${escapeAttribute(event.id)}">${escapeHtml(event.title || 'Evento')}</option>`).join('')}</select></div>
+    <div class="field"><label>Metodo di pagamento</label><select id="expenseMethod"><option value="Carta">Carta</option><option value="Contanti">Contanti</option><option value="Bonifico">Bonifico</option><option value="Altro">Altro</option></select></div>
+    <div class="field"><label>Scontrino (facoltativo)</label><input id="expenseReceipt" type="file" accept="image/*" capture="environment"><small>Da smartphone si aprirà la fotocamera posteriore. L'immagine viene ridotta prima dell'invio.</small></div>
+    <div class="field"><label>Note</label><textarea id="expenseNotes" maxlength="1000"></textarea></div>`;
+  const button = document.getElementById('editSaveBtn');
+  button.style.display = '';
+  button.textContent = 'Registra';
+  button.onclick = saveExpense;
+  document.getElementById('editModal').classList.add('active');
+};
+
+async function saveExpense() {
+  const button = document.getElementById('editSaveBtn');
+  const amount = Number(document.getElementById('expenseAmount').value);
+  if (!Number.isFinite(amount) || amount <= 0) return alert('Inserisci un importo valido.');
+  button.disabled = true; button.textContent = 'Salvataggio…';
+  try {
+    const receiptFile = document.getElementById('expenseReceipt').files[0];
+    const receiptPublicId = receiptFile ? await uploadReceipt(receiptFile) : null;
+    const date = new Date(`${document.getElementById('expenseDate').value}T12:00:00`);
+    await addDoc(collection(db, 'expenses'), {
+      amount, date: Timestamp.fromDate(date), supplier: document.getElementById('expenseSupplier').value.trim(),
+      category: document.getElementById('expenseCategory').value, eventId: document.getElementById('expenseEvent').value || null,
+      paymentMethod: document.getElementById('expenseMethod').value, notes: document.getElementById('expenseNotes').value.trim(),
+      receiptPublicId, createdAt: serverTimestamp(),
+    });
+    closeEditModal(); await loadAllData();
+  } catch (error) { console.error(error); alert(`Impossibile registrare la spesa: ${error.message}`); }
+  finally { button.disabled = false; button.textContent = 'Salva'; button.onclick = saveEdit; }
+}
+
+window.openReceipt = async function (publicId) {
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const response = await fetch(`/api/receipt-url?publicId=${encodeURIComponent(publicId)}`, { headers: { Authorization: `Bearer ${token}` } });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Documento non disponibile');
+    window.open(payload.url, '_blank', 'noopener');
+  } catch (error) { alert(error.message); }
+};
+
+async function uploadReceipt(file) {
+  if (!file.type.startsWith('image/')) throw new Error('Lo scontrino deve essere un’immagine.');
+  const dataUri = await compressImage(file);
+  const token = await auth.currentUser.getIdToken();
+  const response = await fetch('/api/upload-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ dataUri, fileName: file.name }) });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || 'Upload non riuscito');
+  return payload.url;
+}
+
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image(); const reader = new FileReader();
+    reader.onerror = reject; reader.onload = () => { image.onload = () => {
+      const scale = Math.min(1, 1600 / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas'); canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale);
+      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height); resolve(canvas.toDataURL('image/jpeg', .82));
+    }; image.onerror = reject; image.src = reader.result; }; reader.readAsDataURL(file);
+  });
+}
+
+window.exportAccountingCSV = function () {
+  const rows = [
+    ['Data', 'Tipo', 'Descrizione', 'Categoria/metodo', 'Importo'],
+    ...(allData.bookings || []).filter(b => b.status === 'paid').map(b => [formatTs(b.paidAt || b.createdAt), 'Entrata', b.eventTitle || 'Prenotazione', b.paymentMethod || '', b.total || 0]),
+    ...(allData.expenses || []).map(e => [formatTs(e.date || e.createdAt), 'Uscita', e.supplier || '', e.category || '', e.amount || 0]),
+  ];
+  const csv = rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })); const link = document.createElement('a'); link.href = url; link.download = `contabilita_${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url);
+};
+
+function dateValue(value) { return value?.toDate ? value.toDate().getTime() : new Date(value || 0).getTime(); }
+function formatEuro(value) { return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value || 0); }
+function escapeHtml(value) { const div = document.createElement('div'); div.textContent = value || ''; return div.innerHTML; }
+function escapeAttribute(value) { return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
 
 // ===================================================================
 // EDIT EVENT
