@@ -172,6 +172,7 @@ if (isPlanning) {
             </div>
             ${actionButton}
           </div>
+          ${ev.purchaseGroupActive ? `<a href="/group-purchase.html?group=${encodeURIComponent(ev.purchaseGroupId || '')}" class="btn-notify-link">🍷 Acquista i vini della degustazione →</a>` : ''}
           ${isPlanning ? '<a href="#newsletter" class="btn-notify-link">Avvisami quando sarà disponibile →</a>' : ''}
         </div>
       </div>

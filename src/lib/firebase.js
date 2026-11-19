@@ -37,6 +37,11 @@ export async function getEvents() {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+export async function getActivePurchaseGroups() {
+  const snap = await getDocs(query(collection(db, 'purchase_groups'), where('active', '==', true)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
 /** Fetch a single event by ID */
 export async function getEvent(eventId) {
   const snap = await getDoc(doc(db, 'events', eventId));
