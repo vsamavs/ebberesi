@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   try {
     if (req.body?.action === 'group-purchase') {
       const { groupId, eventTitle, contact, wines, total } = req.body;
-      if (!groupId || !contact?.email || !contact?.name || !contact?.surname || !contact?.phone || !Array.isArray(wines) || !wines.length) return res.status(400).json({ error: 'Dati richiesta non validi' });
+      if (!groupId || !contact?.email || !contact?.name || !contact?.surname || !Array.isArray(wines) || !wines.length) return res.status(400).json({ error: 'Dati richiesta non validi' });
       const request = { groupId, eventTitle: eventTitle || '', contact, wines: wines.map(w => ({ producer: String(w.producer || ''), name: String(w.name || ''), price: Number(w.price) || 0, qty: Number(w.qty) || 0 })), total: Number(total) || 0, createdAt: admin.firestore.FieldValue.serverTimestamp(), status: 'new' };
       const ref = await db.collection('purchase_requests').add(request);
       try { await sendAdminGroupPurchaseNotification({ ...request, id: ref.id }); } catch (error) { console.error('Group purchase email failed:', error); }
