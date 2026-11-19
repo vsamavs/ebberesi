@@ -251,3 +251,12 @@ export async function sendAdminBookingNotification(booking) {
 
   console.log(`Admin notification sent for booking ${booking.bookingId}`);
 }
+
+export async function sendAdminGroupPurchaseNotification(request) {
+  const lines = request.wines.map(w => `<tr><td style="padding:6px 0">${w.qty}× ${w.producer} — ${w.name}</td><td style="text-align:right">€${(w.qty * w.price).toFixed(2).replace('.', ',')}</td></tr>`).join('');
+  await transporter.sendMail({
+    from: `"Ebbere Si" <${process.env.GMAIL_USER_ALIAS}>`, to: process.env.ADMIN_EMAIL,
+    subject: `Nuova richiesta vini — ${request.contact.name} ${request.contact.surname}`,
+    html: emailWrapper(`<h2 style="font-family:Georgia,serif;font-weight:400">Nuova richiesta gruppo di acquisto</h2><p><strong>${request.eventTitle}</strong></p><p>${request.contact.name} ${request.contact.surname}<br>${request.contact.email}<br>${request.contact.phone}</p><table style="width:100%;border-collapse:collapse">${lines}<tr style="border-top:1px solid #ddd"><td style="padding-top:10px"><strong>Totale stimato</strong></td><td style="text-align:right;padding-top:10px"><strong>€${request.total.toFixed(2).replace('.', ',')}</strong></td></tr></table>`),
+  });
+}

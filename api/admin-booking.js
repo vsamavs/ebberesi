@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import { confirmBooking } from './_lib/confirm-booking.js';
-import { sendBookingConfirmation, sendAdminBookingNotification } from './_lib/send-confirmation-email.js';
+import { sendBookingConfirmation, sendAdminBookingNotification, sendAdminGroupPurchaseNotification } from './_lib/send-confirmation-email.js';
 import { activateMembershipIfNeeded } from './_lib/activate-membership.js';
 
 if (!admin.apps.length) {
@@ -23,6 +23,18 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
+    if (req.body?.action === 'group-purchase') {
+      const { groupId, eventTitle, contact, wines, total } = req.body;
+      if (!groupId || !contact?.email || !contact?.name || !contact?.surname || !Array.isArray(wines) || !wines.length) return res.status(400).json({ error: 'Dati richiesta non validi' });
+      const request = { groupId, eventTitle: eventTitle || '', contact, wines: wines.map(w => ({ producer: String(w.producer || ''), name: String(w.name || ''), price: Number(w.price) || 0, qty: Number(w.qty) || 0 })), total: Number(total) || 0, createdAt: admin.firestore.FieldValue.serverTimestamp(), status: 'new' };
+      const ref = await db.collection('purchase_requests').add(request);
+      try { await sendAdminGroupPurchaseNotification({ ...request, id: ref.id }); } catch (error) { console.error('Group purchase email failed:', error); }
+      try {
+        const tokens = (await db.collection('admin_push_tokens').get()).docs.map(doc => doc.data().token).filter(Boolean);
+        if (tokens.length) await admin.messaging().sendEachForMulticast({ tokens, notification: { title: 'Nuova richiesta vini', body: `${contact.name} ${contact.surname} · ${eventTitle || 'Gruppo di acquisto'}` }, data: { url: '/admin.html' } });
+      } catch (error) { console.error('Push notification failed:', error); }
+      return res.status(201).json({ success: true, id: ref.id });
+    }
     const { bookingId, adminEmail, isPaid } = req.body;
 
     if (adminEmail !== process.env.ADMIN_EMAIL) {
