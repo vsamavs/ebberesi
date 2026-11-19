@@ -1,6 +1,7 @@
 import { getActivePurchaseGroups, onAuth, getUserProfile } from './lib/firebase.js';
 
 document.head.insertAdjacentHTML('beforeend', '<style>#groupContent{margin-left:48px;max-width:900px}.ticket-type-label{font-family:var(--serif);font-size:1.45rem;line-height:1.15;color:var(--ink);margin-bottom:10px}@media(max-width:520px){#groupContent{margin-left:24px}}</style>');
+document.head.insertAdjacentHTML('beforeend', '<style>#groupContent .wine-field:nth-child(2){font-size:0}#groupContent .wine-field:nth-child(2) b{font-size:.72rem}#groupContent .wine-field:nth-child(2)>span{font-size:14px}</style>');
 
 let group, user, profile, quantities = {};
 const money = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n || 0);
