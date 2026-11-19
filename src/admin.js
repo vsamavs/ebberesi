@@ -56,13 +56,14 @@ window.handleAdminLogout = async function () {
 // ===================================================================
 async function loadAllData() {
   try {
-    const [bookingsSnap, eventsSnap, membersSnap, usersSnap, newsletterSnap, expensesSnap] = await Promise.all([
+    const [bookingsSnap, eventsSnap, membersSnap, usersSnap, newsletterSnap, expensesSnap, groupsSnap] = await Promise.all([
       getDocs(query(collection(db, 'bookings'), orderBy('createdAt', 'desc'))),
       getDocs(query(collection(db, 'events'), orderBy('date', 'asc'))),
       getDocs(collection(db, 'members')),
       getDocs(collection(db, 'users')),
       getDocs(collection(db, 'newsletter')),
       getDocs(query(collection(db, 'expenses'), orderBy('date', 'desc'))),
+      getDocs(collection(db, 'purchase_groups')),
     ]);
 
     allData.bookings = bookingsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -71,6 +72,7 @@ async function loadAllData() {
     allData.users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     allData.newsletter = newsletterSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     allData.expenses = expensesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    allData.purchaseGroups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     renderStats();
     switchTab(currentTab);
@@ -113,7 +115,7 @@ window.switchTab = function (tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelector(`.tab[onclick*="${tab}"]`)?.classList.add('active');
 
-  const renderers = { bookings: renderBookings, events: renderEvents, members: renderMembers, users: renderUsers, newsletter: renderNewsletter, accounting: renderAccounting };
+  const renderers = { bookings: renderBookings, events: renderEvents, members: renderMembers, users: renderUsers, newsletter: renderNewsletter, accounting: renderAccounting, purchases: renderPurchaseGroups };
   (renderers[tab] || renderBookings)();
 };
 
@@ -302,6 +304,19 @@ function renderNewsletter() {
 // ACCOUNTING
 // Entrate are derived from confirmed bookings; expenses are internal records.
 // ===================================================================
+function renderPurchaseGroups() {
+  const groups = allData.purchaseGroups || [];
+  document.getElementById('tabContent').innerHTML = `<div class="table-wrap"><div class="table-toolbar"><h3>Gruppi di acquisto</h3><button class="btn-sm primary" onclick="openPurchaseGroupForm()">+ Nuovo gruppo</button></div><table><thead><tr><th>Evento</th><th>Scadenza</th><th>Vini</th><th>Stato</th></tr></thead><tbody>${groups.length ? groups.map(g => `<tr><td>${escapeHtml(g.eventTitle || '—')}</td><td>${formatTs(g.deadline)}</td><td>${(g.wines || []).length}</td><td><span class="badge ${g.active ? 'badge-paid' : 'badge-pending'}">${g.active ? 'Attivo' : 'Chiuso'}</span></td></tr>`).join('') : '<tr><td colspan="4" class="empty-state">Nessun gruppo creato</td></tr>'}</tbody></table></div>`;
+}
+
+window.openPurchaseGroupForm = function () {
+  document.getElementById('editModalTitle').textContent = 'Nuovo gruppo di acquisto';
+  document.getElementById('editModalBody').innerHTML = `<div class="field"><label>Evento</label><select id="pgEvent">${(allData.events || []).map(e => `<option value="${e.id}">${escapeHtml(e.title)}</option>`).join('')}</select></div><div class="field"><label>Titolo</label><input id="pgTitle" value="I vini della serata"></div><div class="field"><label>Scadenza</label><input id="pgDeadline" type="datetime-local"></div><div class="field"><label><input id="pgActive" type="checkbox" checked> Gruppo attivo</label></div><div id="pgWines"></div><button class="btn-sm" type="button" onclick="addPurchaseWine()">+ Aggiungi vino</button>`;
+  addPurchaseWine(); const button=document.getElementById('editSaveBtn'); button.style.display=''; button.textContent='Crea gruppo'; button.onclick=savePurchaseGroup; document.getElementById('editModal').classList.add('active');
+};
+window.addPurchaseWine = function () { const host=document.getElementById('pgWines'); host.insertAdjacentHTML('beforeend', `<div class="field pg-wine"><label>Vino</label><input class="pg-producer" placeholder="Produttore"><input class="pg-name" placeholder="Nome vino" style="margin-top:6px"><select class="pg-type" style="margin-top:6px"><option value="bianco">Bianco</option><option value="rosato">Rosato</option><option value="rosso">Rosso</option><option value="bianco bollicine">Bianco bollicine</option><option value="rosato bollicine">Rosato bollicine</option><option value="rosso bollicine">Rosso bollicine</option></select><input class="pg-vintage" placeholder="Annata" style="margin-top:6px"><input class="pg-price" type="number" step="0.01" min="0" placeholder="Prezzo" style="margin-top:6px"><input class="pg-image" placeholder="URL foto (facoltativo)" style="margin-top:6px"></div>`); };
+async function savePurchaseGroup() { const eventId=document.getElementById('pgEvent').value; const event=(allData.events||[]).find(e=>e.id===eventId); const wines=[...document.querySelectorAll('.pg-wine')].map(row=>({producer:row.querySelector('.pg-producer').value.trim(),name:row.querySelector('.pg-name').value.trim(),type:row.querySelector('.pg-type').value,vintage:row.querySelector('.pg-vintage').value.trim(),price:Number(row.querySelector('.pg-price').value),image:row.querySelector('.pg-image').value.trim()})).filter(w=>w.producer&&w.name&&Number.isFinite(w.price)); if(!event||!wines.length)return alert('Seleziona un evento e inserisci almeno un vino con prezzo.'); const deadline=document.getElementById('pgDeadline').value; const ref=await addDoc(collection(db,'purchase_groups'),{eventId,eventTitle:event.title,title:document.getElementById('pgTitle').value.trim()||'I vini della serata',active:document.getElementById('pgActive').checked,deadline:deadline?Timestamp.fromDate(new Date(deadline)):null,wines}); await updateDoc(doc(db,'events',eventId),{purchaseGroupId:ref.id,purchaseGroupActive:document.getElementById('pgActive').checked}); closeEditModal(); await loadAllData(); }
+
 function renderAccounting() {
   const expenses = allData.expenses || [];
   const paidBookings = (allData.bookings || []).filter(b => b.status === 'paid');
