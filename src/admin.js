@@ -761,7 +761,10 @@ function escapeAttribute(value) {
 // EDIT EVENT
 // ===================================================================
 window.editEvent = function (id) {
-  document.getElementById("editSaveBtn").style.display = "";
+  const saveButton = document.getElementById("editSaveBtn");
+  saveButton.style.display = "";
+  saveButton.textContent = "Salva";
+  saveButton.onclick = window.saveEdit;
   const event = allData.events.find((e) => e.id === id);
   if (!event) return;
   editingDoc = { collection: "events", id };
