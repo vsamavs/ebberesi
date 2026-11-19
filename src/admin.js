@@ -309,6 +309,34 @@ function renderPurchaseGroups() {
   document.getElementById('tabContent').innerHTML = `<div class="table-wrap"><div class="table-toolbar"><h3>Gruppi di acquisto</h3><button class="btn-sm primary" onclick="openPurchaseGroupForm()">+ Nuovo gruppo</button></div><table><thead><tr><th>Evento</th><th>Scadenza</th><th>Vini</th><th>Stato</th></tr></thead><tbody>${groups.length ? groups.map(g => `<tr><td>${escapeHtml(g.eventTitle || '—')}</td><td>${formatTs(g.deadline)}</td><td>${(g.wines || []).length}</td><td><span class="badge ${g.active ? 'badge-paid' : 'badge-pending'}">${g.active ? 'Attivo' : 'Chiuso'}</span></td></tr>`).join('') : '<tr><td colspan="4" class="empty-state">Nessun gruppo creato</td></tr>'}</tbody></table></div>`;
 }
 
+window.editPurchaseGroup = function (id) {
+  const group = (allData.purchaseGroups || []).find(item => item.id === id);
+  if (!group) return;
+  window.openPurchaseGroupForm();
+  document.getElementById('editModalTitle').textContent = 'Modifica gruppo di acquisto';
+  document.getElementById('pgEvent').value = group.eventId || '';
+  document.getElementById('pgTitle').value = group.title || '';
+  document.getElementById('pgActive').checked = group.active === true;
+  document.getElementById('pgWines').innerHTML = '';
+  (group.wines || []).forEach(() => addPurchaseWine());
+  document.getElementById('editSaveBtn').textContent = 'Salva modifiche';
+  document.getElementById('editSaveBtn').onclick = async () => {
+    const active = document.getElementById('pgActive').checked;
+    await updateDoc(doc(db, 'purchase_groups', id), { title: document.getElementById('pgTitle').value.trim(), active });
+    await updateDoc(doc(db, 'events', group.eventId), { purchaseGroupActive: active });
+    closeEditModal(); await loadAllData();
+  };
+};
+
+document.getElementById('tabContent')?.addEventListener('click', event => {
+  if (currentTab !== 'purchases') return;
+  const row = event.target.closest('tbody tr');
+  if (!row) return;
+  const index = [...row.parentElement.children].indexOf(row);
+  const group = (allData.purchaseGroups || [])[index];
+  if (group) window.editPurchaseGroup(group.id);
+});
+
 window.openPurchaseGroupForm = function () {
   document.getElementById('editModalTitle').textContent = 'Nuovo gruppo di acquisto';
   document.getElementById('editModalBody').innerHTML = `<div class="field"><label>Evento</label><select id="pgEvent">${(allData.events || []).map(e => `<option value="${e.id}">${escapeHtml(e.title)}</option>`).join('')}</select></div><div class="field"><label>Titolo</label><input id="pgTitle" value="I vini della serata"></div><div class="field"><label>Scadenza</label><input id="pgDeadline" type="datetime-local"></div><div class="field"><label><input id="pgActive" type="checkbox" checked> Gruppo attivo</label></div><div id="pgWines"></div><button class="btn-sm" type="button" onclick="addPurchaseWine()">+ Aggiungi vino</button>`;
