@@ -30,11 +30,13 @@ export async function getEvents() {
   const q = query(
     collection(db, 'events'),
     where('published', '==', true),
-    where('date', '>=', Timestamp.now()),
     orderBy('date', 'asc')
   );
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const now = Timestamp.now().toMillis();
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(event => event.forcePublish === true || !event.date || event.date.toMillis() >= now);
 }
 
 export async function getActivePurchaseGroups() {
