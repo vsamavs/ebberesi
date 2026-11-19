@@ -1,5 +1,19 @@
 import { getActivePurchaseGroups, onAuth, getUserProfile } from './lib/firebase.js';
 
+document.head.insertAdjacentHTML('beforeend', '<style>#groupContent .table-toolbar h3{font-family:var(--serif);font-size:1.8rem;font-weight:400}#groupContent .wine-fields{display:grid;grid-template-columns:repeat(6,minmax(70px,1fr));gap:10px 18px}@media(max-width:720px){#groupContent .wine-fields{grid-template-columns:repeat(3,1fr)}}</style>');
+
+function addAlcoholColumns() {
+  document.querySelectorAll('#groupContent .wine-row').forEach((row, index) => {
+    const fields = row.querySelector('.wine-fields');
+    if (!fields || fields.querySelector('[data-alc]')) return;
+    const field = document.createElement('span');
+    field.className = 'wine-field'; field.dataset.alc = 'true';
+    field.innerHTML = `<b>% Vol</b>${group?.wines?.[index]?.alc || '—'}`;
+    fields.insertBefore(field, fields.lastElementChild);
+  });
+}
+setInterval(addAlcoholColumns, 250);
+
 document.head.insertAdjacentHTML('beforeend', '<style>#groupContent{margin-left:48px;max-width:900px}.ticket-type-label{font-family:var(--serif);font-size:1.45rem;line-height:1.15;color:var(--ink);margin-bottom:10px}@media(max-width:520px){#groupContent{margin-left:24px}}</style>');
 document.head.insertAdjacentHTML('beforeend', '<style>#groupContent .wine-field:nth-child(2){font-size:0}#groupContent .wine-field:nth-child(2) b{font-size:.72rem}#groupContent .wine-field:nth-child(2)>span{font-size:14px}</style>');
 
